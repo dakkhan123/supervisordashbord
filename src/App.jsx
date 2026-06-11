@@ -47,6 +47,16 @@ function AppContent() {
     fetchAlertCount();
   }, [refreshTrigger]);
 
+  // Silent background poll every 15 seconds — only updates sidebar badge & notifications
+  // Does NOT call triggerRefresh() to avoid causing child page loading skeleton flicker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchAlertCount();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Modal states
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -91,16 +101,17 @@ function AppContent() {
     }
   };
 
-  // Handle Reorder Submit (creates a restock request in MongoDB)
+  // Handle Reorder Submit (directly replenishes the stock in MongoDB for immediate synchronization)
   const handleReorderSubmit = async (reorderData) => {
     try {
-      const res = await api.createRestockRequest({
+      const res = await api.reorderItem({
         sku: reorderData.sku,
         qty: reorderData.qty,
-        supplier: reorderData.supplier || ''
+        supplier: reorderData.supplier || '',
+        priority: reorderData.priority || 'Standard (5–7 Business Days)'
       });
       if (res.success) {
-        showToast(`Restock request for ${reorderData.qty} units submitted for approval`, 'success');
+        showToast(`Successfully reordered ${reorderData.qty} units. Stock replenished.`, 'success');
         setReorderModalOpen(false);
         setReorderItem(null);
         triggerRefresh();
@@ -109,7 +120,7 @@ function AppContent() {
       }
     } catch (err) {
       console.error(err);
-      showToast('Failed to submit restock request', 'error');
+      showToast('Failed to replenish stock', 'error');
     }
   };
 
@@ -188,6 +199,7 @@ function AppContent() {
                   onEditClick={openEditModal}
                   onReorderClick={openReorderModal}
                   refreshTrigger={refreshTrigger}
+                  triggerRefresh={triggerRefresh}
                 />
               } 
             />
@@ -210,6 +222,7 @@ function AppContent() {
                   searchVal={searchVal} 
                   showToast={showToast}
                   refreshTrigger={refreshTrigger}
+                  triggerRefresh={triggerRefresh}
                 />
               } 
             />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 
 const Reports = ({ searchVal, showToast, refreshTrigger }) => {
@@ -6,6 +6,7 @@ const Reports = ({ searchVal, showToast, refreshTrigger }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isInitialLoad = useRef(true);
 
   // Default range: 2025-06-01 to today (covering all seeded + new transaction data)
   const getInitialDates = () => {
@@ -26,13 +27,15 @@ const Reports = ({ searchVal, showToast, refreshTrigger }) => {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Only show loading skeleton on first fetch to prevent flicker
+      if (isInitialLoad.current) {
+        setLoading(true);
+      }
       setError(null);
       const params = {
         from: dateFrom,
         to: dateTo,
-        type: filterType !== 'all' ? filterType : undefined,
-        q: searchVal || undefined
+        type: filterType !== 'all' ? filterType : undefined
       };
       const [historyRes, inventoryRes] = await Promise.all([
         api.getHistory(params),
@@ -42,20 +45,26 @@ const Reports = ({ searchVal, showToast, refreshTrigger }) => {
         setHistory(historyRes.data);
         setItems(inventoryRes.data);
       } else {
-        setError(historyRes.error || inventoryRes.error || 'Failed to retrieve transaction reports');
+        if (isInitialLoad.current) {
+          setError(historyRes.error || inventoryRes.error || 'Failed to retrieve transaction reports');
+        }
       }
     } catch (err) {
       console.error(err);
-      setError('Connection refused. Verify local database server status.');
-      showToast('Error loading transaction history logs', 'error');
+      if (isInitialLoad.current) {
+        setError('Connection refused. Verify local database server status.');
+        showToast('Error loading transaction history logs', 'error');
+      }
     } finally {
       setLoading(false);
+      isInitialLoad.current = false;
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [dateFrom, dateTo, filterType, searchVal, refreshTrigger]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFrom, dateTo, filterType, refreshTrigger]);
 
   const handleExportPDF = () => {
     window.print();

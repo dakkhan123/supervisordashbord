@@ -10,7 +10,7 @@ SmartOps is configured to be fully **reopen-safe** and **one-click runnable**. W
 2.  If prompted to **Allow Automatic Tasks**, click **Allow**.
     *   *If not prompted, open Command Palette (`Ctrl+Shift+P`), type `Tasks: Manage Automatic Tasks in Folder`, and choose `Allow Automatic Tasks`.*
 3.  The startup script will automatically check environment variables, verify dependencies, clear ports, ensure MongoDB is running, and spin up frontend and backend services.
-4.  Click **Go Live** at the bottom of the editor. Live Server will open the browser at `http://localhost:5500`, which is configured to proxy all traffic directly to the Vite frontend server at `localhost:5173`.
+4.  Click **Go Live** at the bottom of the editor. Live Server will open the browser at `http://127.0.0.1:5500`, which is configured to proxy all traffic directly to the Vite frontend server at `127.0.0.1:5173`.
 
 ---
 
@@ -41,10 +41,10 @@ This launcher script validates Node.js, frees the ports, and runs the frontend a
 
 | Service | Port / URL | Status Check |
 |---|---|---|
-| **Vite Dev Server** | `http://localhost:5173` | Main client interface |
-| **Express Backend** | `http://localhost:5000` | Health check: `http://localhost:5000/health` |
-| **Live Server Proxy** | `http://localhost:5500` | Go Live entry point |
-| **MongoDB Database** | `http://localhost:27017` | Checked automatically at startup |
+| **Vite Dev Server** | `http://127.0.0.1:5173` | Main client interface |
+| **Express Backend** | `http://127.0.0.1:5000` | Health check: `http://127.0.0.1:5000/health` |
+| **Live Server Proxy** | `http://127.0.0.1:5500` | Go Live entry point |
+| **MongoDB Database** | `mongodb://127.0.0.1:27017` | Checked automatically at startup |
 
 ---
 
