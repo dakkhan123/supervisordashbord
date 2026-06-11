@@ -71,9 +71,9 @@ if not exist "node_modules\concurrently" (
 
 :: ── Install server dependencies if needed ───────────────────────────────────
 echo  [INFO] Checking server dependencies...
-if not exist "server\node_modules\express" (
+if not exist "smartops-supervisor\node_modules\express" (
     echo  [INFO] Installing server dependencies...
-    cd server
+    cd smartops-supervisor
     call npm install
     if errorlevel 1 (
         echo  [ERROR] Server npm install failed.
@@ -90,7 +90,7 @@ if not exist "server\node_modules\express" (
 :: ── Start Backend ────────────────────────────────────────────────────────────
 echo.
 echo  [INFO] Starting Backend (port 5000)...
-start "SmartOps Backend" cmd /k "cd /d "%~dp0" && title SmartOps Backend && node server/server.js"
+start "SmartOps Backend" cmd /k "cd /d "%~dp0" && title SmartOps Backend && node smartops-supervisor/server.js"
 
 :: Wait 3 seconds for backend to initialize before starting frontend
 timeout /t 3 /nobreak >nul

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
@@ -8,6 +8,7 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isInitialLoad = useRef(true);
 
   // Time tracker for header
   const [currentTimeStr, setCurrentTimeStr] = useState('');
@@ -31,7 +32,10 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Only show loading skeleton on the very first fetch
+      if (isInitialLoad.current) {
+        setLoading(true);
+      }
       setError(null);
       const [invRes, histRes] = await Promise.all([
         api.getInventory(),
@@ -45,15 +49,20 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
       }
     } catch (err) {
       console.error(err);
-      setError('Network communication failed. Ensure Express server is connected.');
-      showToast('Error loading dashboard data', 'error');
+      // Only show error state if we have no data at all
+      if (isInitialLoad.current) {
+        setError('Network communication failed. Ensure Express server is connected.');
+        showToast('Error loading dashboard data', 'error');
+      }
     } finally {
       setLoading(false);
+      isInitialLoad.current = false;
     }
   };
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
   // Filter items based on top search bar (if searchVal is used)

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --port 5173 --strictPort false",
     "dev:frontend": "vite --port 5173 --strictPort false",
-    "dev:server": "node server/server.js",
+    "dev:server": "node smartops-supervisor/server.js",
     "dev:all": "concurrently --kill-others-on-fail --names \"SERVER,FRONTEND\" --prefix-colors \"yellow,cyan\" \"npm run dev:server\" \"npm run dev:frontend\"",
     "start": "node scripts/startup.js",
     "build": "vite build",

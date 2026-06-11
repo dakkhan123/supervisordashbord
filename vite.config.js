@@ -7,12 +7,12 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,   // Auto-pick next free port if 5173 is busy
-    host: 'localhost',
+    host: '127.0.0.1',
     open: true,          // Auto-open browser on startup
     // NOTE: Do NOT hardcode hmr.port — let Vite match it to the actual server port
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         secure: false,
       }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 
@@ -10,6 +10,7 @@ const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerR
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [requestActionLoading, setRequestActionLoading] = useState(null);
+  const isInitialLoad = useRef(true);
 
   const [activeSubTab, setActiveSubTab] = useState(() => {
     if (location.state && location.state.tab) {
@@ -26,13 +27,20 @@ const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerR
     }
   }, [location.state]);
 
-  const fetchData = async () => {
+  const hasAudited = useRef(false);
+
+  const fetchData = async (runAudit = false) => {
     try {
-      setLoading(true);
+      // Only show loading skeleton on first fetch
+      if (isInitialLoad.current) {
+        setLoading(true);
+      }
       setError(null);
 
-      // Perform audit first to sync DB alert collection with current stock levels
-      await api.auditAlerts();
+      // Only audit once per page mount to avoid repeated expensive audit calls
+      if (runAudit) {
+        await api.auditAlerts();
+      }
 
       const [activeRes, resolvedRes, requestsRes] = await Promise.all([
         api.getActiveAlerts(),
@@ -44,7 +52,9 @@ const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerR
         setActiveAlerts(activeRes.data);
         setResolvedAlerts(resolvedRes.data);
       } else {
-        setError(activeRes.error || resolvedRes.error || 'Failed to retrieve alert datasets');
+        if (isInitialLoad.current) {
+          setError(activeRes.error || resolvedRes.error || 'Failed to retrieve alert datasets');
+        }
       }
 
       if (requestsRes.success) {
@@ -52,10 +62,13 @@ const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerR
       }
     } catch (err) {
       console.error(err);
-      setError('Network communication failed. Ensure Express server is connected.');
-      showToast('Error loading stock alerts', 'error');
+      if (isInitialLoad.current) {
+        setError('Network communication failed. Ensure Express server is connected.');
+        showToast('Error loading stock alerts', 'error');
+      }
     } finally {
       setLoading(false);
+      isInitialLoad.current = false;
     }
   };
 
@@ -97,8 +110,24 @@ const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerR
     }
   };
 
+  // On mount: run audit to sync alert DB with current stock levels
   useEffect(() => {
-    fetchData();
+    const runInitialFetch = async () => {
+      if (!hasAudited.current) {
+        hasAudited.current = true;
+        await fetchData(true);
+      }
+    };
+    runInitialFetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // On subsequent refreshes: re-fetch without re-auditing
+  useEffect(() => {
+    if (hasAudited.current) {
+      fetchData(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
   const handleMuteAlert = async (id) => {
@@ -107,6 +136,7 @@ const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerR
       if (res.success) {
         showToast('Alert warning muted successfully', 'success');
         fetchData();
+        if (triggerRefresh) triggerRefresh();
       } else {
         showToast(res.error || 'Failed to mute alert', 'error');
       }
@@ -134,6 +164,7 @@ const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerR
       );
       showToast('Emergency orders placed successfully!', 'success');
       fetchData();
+      if (triggerRefresh) triggerRefresh();
     } catch (err) {
       console.error(err);
       showToast('Failed to execute bulk reorder', 'error');

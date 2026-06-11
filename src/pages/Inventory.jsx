@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { DeleteConfirmModal } from '../components/Modals';
 
-const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderClick, refreshTrigger }) => {
+const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderClick, refreshTrigger, triggerRefresh }) => {
   const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isInitialLoad = useRef(true);
 
   const [currentFilter, setCurrentFilter] = useState(() => {
     if (location.state && location.state.filter) {
@@ -43,25 +44,34 @@ const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderCli
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Only show loading skeleton on first fetch
+      if (isInitialLoad.current) {
+        setLoading(true);
+      }
       setError(null);
       const res = await api.getInventory();
       if (res.success) {
         setItems(res.data);
       } else {
-        setError(res.error || 'Failed to retrieve inventory catalog');
+        if (isInitialLoad.current) {
+          setError(res.error || 'Failed to retrieve inventory catalog');
+        }
       }
     } catch (err) {
       console.error(err);
-      setError('Connection refused. Verify local database server status.');
-      showToast('Error fetching inventory items', 'error');
+      if (isInitialLoad.current) {
+        setError('Connection refused. Verify local database server status.');
+        showToast('Error fetching inventory items', 'error');
+      }
     } finally {
       setLoading(false);
+      isInitialLoad.current = false;
     }
   };
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
   const handleExportCSV = () => {
@@ -119,6 +129,7 @@ const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderCli
         setDeleteModalOpen(false);
         setDeleteItemData(null);
         fetchData();
+        if (triggerRefresh) triggerRefresh();
       } else {
         showToast(res.error || 'Failed to delete item', 'error');
       }
@@ -181,6 +192,7 @@ const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderCli
       showToast('Bulk reorders placed successfully!', 'success');
       clearSelection();
       fetchData();
+      if (triggerRefresh) triggerRefresh();
     } catch (err) {
       console.error(err);
       showToast('Failed to execute bulk reorder', 'error');
