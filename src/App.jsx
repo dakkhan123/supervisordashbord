@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Alerts from './pages/Alerts';
 import Reports from './pages/Reports';
+import PerformanceReports from './pages/PerformanceReports';
 import Settings from './pages/Settings';
 import { api } from './services/api';
 
@@ -151,6 +152,8 @@ function AppContent() {
         return { title: 'Low Stock Alerts', breadcrumb: 'Console / Stock Alerts' };
       case '/reports':
         return { title: 'Reports & Analytics', breadcrumb: 'Console / Reports' };
+      case '/performance':
+        return { title: 'Performance Reports', breadcrumb: 'Console / Performance' };
       case '/settings':
         return { title: 'System Settings', breadcrumb: 'Console / Settings' };
       default:
@@ -223,6 +226,16 @@ function AppContent() {
                   showToast={showToast}
                   refreshTrigger={refreshTrigger}
                   triggerRefresh={triggerRefresh}
+                />
+              } 
+            />
+            <Route 
+              path="/performance" 
+              element={
+                <PerformanceReports 
+                  searchVal={searchVal} 
+                  showToast={showToast}
+                  refreshTrigger={refreshTrigger}
                 />
               } 
             />

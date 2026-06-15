@@ -156,5 +156,42 @@ export const api = {
       method: 'PUT'
     });
     return res.json();
+  },
+
+  // Performance Report APIs
+  getPerformanceKPI: async (params) => {
+    const query = buildQueryString(params);
+    const res = await fetch(`${API_URL}/performance/kpi${query}`);
+    return res.json();
+  },
+
+  getWorkerPerformance: async (params) => {
+    const query = buildQueryString(params);
+    const res = await fetch(`${API_URL}/performance/workers${query}`);
+    return res.json();
+  },
+
+  getTaskTrend: async (params) => {
+    const query = buildQueryString(params);
+    const res = await fetch(`${API_URL}/performance/task-trend${query}`);
+    return res.json();
+  },
+
+  getAttendanceHeatmap: async (params) => {
+    const query = buildQueryString(params);
+    const res = await fetch(`${API_URL}/performance/attendance-heatmap${query}`);
+    return res.json();
+  },
+
+  getTaskDistribution: async (params) => {
+    const query = buildQueryString(params);
+    const res = await fetch(`${API_URL}/performance/task-distribution${query}`);
+    return res.json();
+  },
+
+  getPerformanceExport: async (params) => {
+    const query = buildQueryString(params);
+    const res = await fetch(`${API_URL}/performance/export${query}`);
+    return res.json();
   }
 };

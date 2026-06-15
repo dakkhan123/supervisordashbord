@@ -47,6 +47,7 @@ const tasksRouter = require('./routes/tasks');
 const { router: attendanceRouter, workersRouter } = require('./routes/attendance');
 const salaryRouter = require('./routes/salary');
 const escalationsRouter = require('./routes/escalations');
+const performanceRouter = require('./routes/performance');
 
 // Mount Routers
 app.use('/api/inventory', inventoryRouter);
@@ -60,6 +61,7 @@ app.use('/api/attendance', attendanceRouter);
 app.use('/api/workers', workersRouter);
 app.use('/api/salary', salaryRouter);
 app.use('/api/escalations', escalationsRouter);
+app.use('/api/performance', performanceRouter);
 
 // Health check endpoints
 app.get('/health', (req, res) => {
