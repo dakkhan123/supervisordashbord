@@ -75,6 +75,16 @@ const Sidebar = ({ mobileOpen, setMobileOpen, alertCount = 0 }) => {
             <span className="material-symbols-outlined icon-sm">bar_chart</span>Reports
           </NavLink>
 
+          <NavLink 
+            to="/performance" 
+            onClick={() => setMobileOpen(false)}
+            className={({ isActive }) => 
+              `flex items-center gap-3 px-3 py-[11px] rounded-lg text-secondary-fixed-dim text-[13px] font-medium transition-colors duration-150 relative mb-0.5 hover:bg-white/8 hover:text-white ${isActive ? 'bg-[#5dd9d8]/12 text-primary-fixed font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:height-[60%] before:bg-primary-container before:rounded-r' : ''}`
+            }
+          >
+            <span className="material-symbols-outlined icon-sm">assessment</span>Performance
+          </NavLink>
+
           <span className="text-[10px] font-bold text-secondary-fixed-dim/50 tracking-widest uppercase px-3 py-3 pb-1.5 mt-2">
             System
           </span>
