@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
@@ -6,6 +6,10 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [history, setHistory] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const isInitialLoad = useRef(true);
@@ -37,15 +41,48 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
         setLoading(true);
       }
       setError(null);
-      const [invRes, histRes] = await Promise.all([
+
+      // Get today's date in YYYY-MM-DD in IST timezone
+      const now = new Date();
+      const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      const yyyy = ist.getFullYear();
+      const mm = String(ist.getMonth() + 1).padStart(2, '0');
+      const dd = String(ist.getDate()).padStart(2, '0');
+      const todayDateString = `${yyyy}-${mm}-${dd}`;
+
+      const [invRes, histRes, workersRes, tasksRes, attendanceRes, notificationsRes] = await Promise.all([
         api.getInventory(),
-        api.getHistory()
+        api.getHistory(),
+        api.getWorkers(),
+        api.getTasks(),
+        api.getAttendance({ date: todayDateString }),
+        api.getNotifications()
       ]);
-      if (invRes.success && histRes.success) {
+
+      if (
+        invRes.success && 
+        histRes.success && 
+        workersRes.success && 
+        tasksRes.success && 
+        attendanceRes.success && 
+        notificationsRes.success
+      ) {
         setItems(invRes.data);
         setHistory(histRes.data);
+        setWorkers(workersRes.data);
+        setTasks(tasksRes.data);
+        setAttendance(attendanceRes.data);
+        setNotifications(notificationsRes.data);
       } else {
-        setError(invRes.error || histRes.error || 'Failed to fetch dashboard records');
+        const firstError = 
+          (!invRes.success && invRes.error) ||
+          (!histRes.success && histRes.error) ||
+          (!workersRes.success && workersRes.error) ||
+          (!tasksRes.success && tasksRes.error) ||
+          (!attendanceRes.success && attendanceRes.error) ||
+          (!notificationsRes.success && notificationsRes.error) ||
+          'Failed to fetch dashboard records';
+        setError(firstError);
       }
     } catch (err) {
       console.error(err);
@@ -84,6 +121,27 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
     const hDate = new Date(h.date);
     return today.toDateString() === hDate.toDateString();
   }).reduce((sum, h) => sum + h.qty, 0);
+
+  // Calculate Supervisor KPIs
+  const activeWorkersList = workers.filter(w => w.status === 'Active');
+  const totalWorkersCount = activeWorkersList.length;
+
+  const activeTasksCount = tasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length;
+  const completedTasksCount = tasks.filter(t => t.status === 'Completed').length;
+
+  // Attendance Today calculation: active workers present today
+  const presentTodayCount = activeWorkersList.filter(w => {
+    const record = attendance.find(a => (a.worker?._id === w._id || a.worker === w._id));
+    return record && record.status === 'Present';
+  }).length;
+  const loggedTodayCount = activeWorkersList.filter(w => {
+    const record = attendance.find(a => (a.worker?._id === w._id || a.worker === w._id));
+    return record && (record.status === 'Present' || record.status === 'Absent' || record.status === 'Leave');
+  }).length;
+  const presenceRate = loggedTodayCount > 0 ? Math.round((presentTodayCount / loggedTodayCount) * 100) : 0;
+
+  // Notifications KPIs
+  const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
   // Format large Indian Rupee (Crores / Lakhs)
   const formatValueINR = (num) => {
@@ -171,8 +229,8 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
         </div>
 
         {/* Skeleton KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-          {Array.from({ length: 6 }).map((_, idx) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
+          {Array.from({ length: 7 }).map((_, idx) => (
             <div key={idx} className="bg-surface-lowest border border-outline-variant/60 p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] animate-pulse">
               <div className="flex items-center justify-between mb-3">
                 <div className="h-3 bg-surface-container rounded w-16"></div>
@@ -242,11 +300,21 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-extrabold text-on-surface tracking-tight">Inventory Dashboard</h1>
-        <p className="text-on-surface-variant text-sm">
-          Real-time overview for Unit Pune-A12 · Updated at <span className="font-semibold text-primary">{currentTimeStr}</span> IST
-        </p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-extrabold text-on-surface tracking-tight">Inventory Dashboard</h1>
+          <p className="text-on-surface-variant text-sm">
+            Real-time overview for Unit Pune-A12 · Updated at <span className="font-semibold text-primary">{currentTimeStr}</span> IST
+          </p>
+        </div>
+        <div className="flex gap-2.5">
+          <button 
+            onClick={() => navigate('/scan')}
+            className="btn btn-outline flex items-center gap-2 px-4 py-2 border border-outline-variant hover:bg-surface-low text-on-surface-variant text-xs font-semibold rounded-sm transition-all duration-150 active:scale-95 cursor-pointer"
+          >
+            <span className="material-symbols-outlined icon-xs">qr_code_scanner</span>Scan Item QR
+          </button>
+        </div>
       </div>
 
       {/* Critical Alert Banner */}
@@ -273,93 +341,122 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
       )}
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
+        {/* Total Workers */}
         <div 
-          onClick={() => navigate('/inventory', { state: { filter: 'all' } })}
+          onClick={() => navigate('/workers')}
           className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Total Items</span>
+            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Total Workers</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined icon-sm text-primary">group</span>
+            </div>
+          </div>
+          <div className="text-[26px] font-extrabold text-on-surface leading-none">{totalWorkersCount}</div>
+          <div className="text-[11px] font-semibold text-on-surface-variant mt-1.5">Active Staff Profiles</div>
+        </div>
+
+        {/* Active Tasks */}
+        <div 
+          onClick={() => navigate('/tasks')}
+          className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Active Tasks</span>
+            <div className="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+              <span className="material-symbols-outlined icon-sm text-tertiary">pending_actions</span>
+            </div>
+          </div>
+          <div className="text-[26px] font-extrabold text-on-surface leading-none">{activeTasksCount}</div>
+          <div className="text-[11px] font-semibold text-on-surface-variant mt-1.5">Pending & Underway</div>
+        </div>
+
+        {/* Completed Tasks */}
+        <div 
+          onClick={() => navigate('/tasks')}
+          className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Completed Tasks</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined icon-sm text-primary">task_alt</span>
+            </div>
+          </div>
+          <div className="text-[26px] font-extrabold text-on-surface leading-none">{completedTasksCount}</div>
+          <div className="text-[11px] font-semibold text-on-surface-variant mt-1.5">Allocations Finished</div>
+        </div>
+
+        {/* Attendance Today */}
+        <div 
+          onClick={() => navigate('/attendance')}
+          className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Attendance Today</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined icon-sm text-primary">how_to_reg</span>
+            </div>
+          </div>
+          <div className="text-[26px] font-extrabold text-on-surface leading-none">{presentTodayCount} / {totalWorkersCount}</div>
+          <div className="text-[11px] font-semibold text-primary mt-1.5 flex items-center gap-1">
+            <span className="material-symbols-outlined icon-xs text-primary">trending_up</span>{presenceRate}% <span className="text-on-surface-variant font-normal">Present</span>
+          </div>
+        </div>
+
+        {/* Inventory Summary */}
+        <div 
+          onClick={() => navigate('/inventory')}
+          className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Inventory Summary</span>
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
               <span className="material-symbols-outlined icon-sm text-primary">category</span>
             </div>
           </div>
-          <div className="text-[26px] font-extrabold text-on-surface leading-none">{formatNumber(totalItems)}</div>
-          <div className="text-[11px] font-semibold text-primary mt-1.5 flex items-center gap-1">
-            <span className="material-symbols-outlined icon-xs text-primary">trending_up</span>+2.4% <span className="text-on-surface-variant font-normal">vs last year</span>
-          </div>
+          <div className="text-[26px] font-extrabold text-on-surface leading-none">{formatNumber(totalItems)} Items</div>
+          <div className="text-[11px] font-semibold text-on-surface-variant mt-1.5 truncate">Valuation: {formatValueINR(totalValueINR)}</div>
         </div>
 
-        <div 
-          onClick={() => navigate('/inventory', { state: { highlightStock: true, sort: 'stock-asc' } })}
-          className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Stock Qty</span>
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined icon-sm text-primary">inventory</span>
-            </div>
-          </div>
-          <div className="text-[26px] font-extrabold text-on-surface leading-none">{formatNumber(stockQuantity)}</div>
-          <div className="text-[11px] font-semibold text-on-surface-variant mt-1.5">Units in Stock</div>
-        </div>
-
+        {/* Low Stock Summary Card */}
         <div 
           onClick={() => navigate('/alerts', { state: { tab: 'dashboards' } })}
-          className="bg-error-container/12 border border-error/25 p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
+          className={`p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98 border ${
+            lowStockCount > 0 
+              ? 'bg-error-container/12 border-error/25' 
+              : 'bg-surface-lowest border-outline-variant'
+          }`}
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-error uppercase tracking-wider">Low Stock</span>
-            <div className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center text-error">
-              <span className="material-symbols-outlined icon-sm text-error">warning</span>
+            <span className={`text-[11px] font-bold uppercase tracking-wider ${lowStockCount > 0 ? 'text-error' : 'text-outline'}`}>Low Stock Summary</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${lowStockCount > 0 ? 'bg-error/10 text-error' : 'bg-surface-variant/40 text-outline'}`}>
+              <span className="material-symbols-outlined icon-sm">warning</span>
             </div>
           </div>
-          <div className="text-[26px] font-extrabold text-error leading-none">{lowStockCount}</div>
-          <div className="text-[11px] font-bold text-error mt-1.5">Action Required</div>
+          <div className={`text-[26px] font-extrabold leading-none ${lowStockCount > 0 ? 'text-error' : 'text-on-surface'}`}>{lowStockCount} Items</div>
+          <div className={`text-[11px] font-semibold ${lowStockCount > 0 ? 'text-error font-bold' : 'text-on-surface-variant'} mt-1.5`}>
+            {lowStockCount > 0 ? 'Action Required' : 'Levels Healthy'}
+          </div>
         </div>
 
+        {/* Notifications Card */}
         <div 
-          onClick={() => navigate('/inventory', { state: { filter: 'near' } })}
-          className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
+          onClick={() => navigate('/settings', { state: { tab: 'notifications' } })}
+          className={`p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98 border ${
+            unreadNotificationsCount > 0 
+              ? 'bg-tertiary-container/10 border-tertiary/25' 
+              : 'bg-surface-lowest border-outline-variant'
+          }`}
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Near safety limit</span>
-            <div className="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
-              <span className="material-symbols-outlined icon-sm text-tertiary">hourglass_empty</span>
+            <span className={`text-[11px] font-bold uppercase tracking-wider ${unreadNotificationsCount > 0 ? 'text-tertiary' : 'text-outline'}`}>Notifications</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${unreadNotificationsCount > 0 ? 'bg-tertiary/10 text-tertiary' : 'bg-surface-variant/40 text-outline'}`}>
+              <span className="material-symbols-outlined icon-sm">notifications</span>
             </div>
           </div>
-          <div className="text-[26px] font-extrabold text-on-surface leading-none">{nearLimitCount}</div>
-          <div className="text-[11px] font-semibold text-on-surface-variant mt-1.5">Buffer Zone Items</div>
-        </div>
-
-        <div 
-          onClick={() => navigate('/reports')}
-          className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Total Value</span>
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined icon-sm text-primary">payments</span>
-            </div>
-          </div>
-          <div className="text-[26px] font-extrabold text-on-surface leading-none">{formatValueINR(totalValueINR)}</div>
-          <div className="text-[11px] font-semibold text-on-surface-variant mt-1.5">INR Valuation</div>
-        </div>
-
-        <div 
-          onClick={() => navigate('/reports')}
-          className="bg-surface-lowest border border-outline-variant p-4.5 rounded-md shadow-sm flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-pointer active:scale-98"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-outline uppercase tracking-wider">Daily Movement</span>
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined icon-sm text-primary">swap_horiz</span>
-            </div>
-          </div>
-          <div className="text-[26px] font-extrabold text-on-surface leading-none">{formatNumber(dailyMovementCount || 1204)}</div>
-          <div className="text-[11px] font-semibold text-primary mt-1.5 flex items-center gap-1">
-            <span className="material-symbols-outlined icon-xs text-primary">trending_up</span>Units Today
-          </div>
+          <div className={`text-[26px] font-extrabold leading-none ${unreadNotificationsCount > 0 ? 'text-tertiary' : 'text-on-surface'}`}>{unreadNotificationsCount} Unread</div>
+          <div className="text-[11px] font-semibold text-on-surface-variant mt-1.5">Total: {notifications.length} Logs</div>
         </div>
       </div>
 
@@ -575,6 +672,140 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
               {history.length === 0 && (
                 <div className="text-center p-10 text-outline">
                   No recent inventory activities logged.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Supervisor Modules Feed Row */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mt-5">
+        {/* Supervisor Notifications Feed */}
+        <div className="bg-surface-lowest border border-outline-variant rounded-md shadow-sm xl:col-span-2 overflow-hidden flex flex-col justify-between">
+          <div className="px-5 py-4 border-b border-outline-variant flex items-center justify-between">
+            <h2 className="text-base font-bold text-on-surface">Recent Notifications</h2>
+            <button 
+              onClick={() => navigate('/settings', { state: { tab: 'notifications' } })}
+              className="btn btn-outline btn-sm font-semibold text-primary hover:bg-primary/5 px-2.5 py-1.5 border border-primary/20 rounded-sm text-xs cursor-pointer active:scale-95 transition-all"
+            >
+              View All Logs →
+            </button>
+          </div>
+          <div className="p-5 flex-1 overflow-y-auto max-h-[360px]">
+            <div className="flex flex-col">
+              {notifications.slice(0, 5).map((n) => {
+                const isUnread = !n.isRead;
+                const icon = n.type.includes('alert') || n.type.includes('deleted') || n.type.includes('rejected')
+                  ? 'warning'
+                  : 'notifications';
+                const color = n.type.includes('alert') || n.type.includes('deleted') || n.type.includes('rejected')
+                  ? 'bg-error/10 text-error'
+                  : 'bg-primary/10 text-primary';
+
+                const handleMarkReadInline = async (id, readState) => {
+                  try {
+                    const res = readState ? await api.markNotificationRead(id) : await api.markNotificationUnread(id);
+                    if (res.success) {
+                      showToast('Notification updated', 'success');
+                      fetchData();
+                    }
+                  } catch (err) {
+                    console.error(err);
+                  }
+                };
+
+                return (
+                  <div key={n._id} className="flex gap-3 py-3.5 border-b border-outline-variant/30 last:border-b-0 relative items-start">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${color}`}>
+                      <span className="material-symbols-outlined icon-sm">{icon}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <div className="text-xs font-bold text-on-surface leading-tight">
+                          {n.title}
+                          {isUnread && (
+                            <span className="ml-2 px-1.5 py-0.5 rounded bg-primary/20 text-primary font-extrabold text-[9px] uppercase">
+                              New
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-outline">
+                          {new Date(n.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}{' '}
+                          {new Date(n.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">{n.message}</p>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => handleMarkReadInline(n._id, isUnread)}
+                          className="text-[10px] font-bold uppercase text-primary hover:underline cursor-pointer"
+                        >
+                          {isUnread ? 'Mark as Read' : 'Mark as Unread'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {notifications.length === 0 && (
+                <div className="text-center p-10 text-outline">
+                  No system notifications logged.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Active Tasks Summary checklist */}
+        <div className="bg-surface-lowest border border-outline-variant rounded-md shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-5 py-4 border-b border-outline-variant flex items-center justify-between">
+            <h2 className="text-base font-bold text-on-surface">Active Tasks Checklist</h2>
+            <button 
+              onClick={() => navigate('/tasks')}
+              className="btn btn-outline btn-sm font-semibold text-primary hover:bg-primary/5 px-2.5 py-1.5 border border-primary/20 rounded-sm text-xs cursor-pointer active:scale-95 transition-all"
+            >
+              Manage Tasks →
+            </button>
+          </div>
+          <div className="p-5 flex-1 overflow-y-auto max-h-[360px]">
+            <div className="flex flex-col gap-3.5">
+              {tasks
+                .filter(t => t.status === 'Pending' || t.status === 'In Progress')
+                .slice(0, 5)
+                .map((t) => {
+                  const isOverdue = t.dueDate && new Date(t.dueDate) < new Date();
+                  return (
+                    <div 
+                      key={t._id} 
+                      onClick={() => navigate('/tasks')}
+                      className="border border-outline-variant/50 rounded p-3 hover:bg-surface-low cursor-pointer transition-all duration-150 flex flex-col gap-1.5"
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 className="text-xs font-bold text-on-surface leading-tight truncate">{t.title}</h4>
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase ${
+                          t.status === 'In Progress' 
+                            ? 'bg-tertiary/10 text-tertiary border border-tertiary/20' 
+                            : 'bg-secondary/10 text-secondary border border-secondary/20'
+                        }`}>
+                          {t.status}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-on-surface-variant truncate">{t.description || 'No instructions provided.'}</p>
+                      <div className="flex justify-between items-center text-[9px] font-semibold text-outline mt-0.5">
+                        <span className="flex items-center gap-0.5"><span className="material-symbols-outlined text-[11px]">account_circle</span>{t.assignedTo?.name || 'Unassigned'}</span>
+                        <span className={`flex items-center gap-0.5 ${isOverdue ? 'text-error font-bold' : ''}`}>
+                          <span className="material-symbols-outlined text-[11px]">calendar_today</span>
+                          {t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-IN') : 'No due date'}
+                          {isOverdue && ' (Overdue)'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              {tasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length === 0 && (
+                <div className="text-center p-10 text-outline">
+                  No pending tasks allocated.
                 </div>
               )}
             </div>

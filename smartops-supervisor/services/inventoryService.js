@@ -2,6 +2,7 @@ const Inventory = require('../models/Inventory');
 const StockTransaction = require('../models/StockTransaction');
 const Alert = require('../models/Alert');
 const Notification = require('../models/Notification');
+const QRCode = require('qrcode');
 
 class InventoryService {
   async getAllItems(queryParams) {
@@ -53,15 +54,29 @@ class InventoryService {
   async createItem(itemData) {
     const { name, sku, cat, qty, threshold, val, loc, gst, emoji, supplier, op } = itemData;
 
-    const existing = await Inventory.findOne({ sku });
+    const existing = await Inventory.findOne({ $or: [{ sku }, { skuCode: sku }] });
     if (existing) {
       const error = new Error('SKU code already exists in the catalog');
       error.statusCode = 400;
       throw error;
     }
 
+    const qrCodeImage = await QRCode.toDataURL(sku);
+
     const item = await Inventory.create({
-      name, sku, cat, qty, threshold, val, loc, gst, emoji, supplier
+      name,
+      sku,
+      cat,
+      qty,
+      threshold,
+      val,
+      loc,
+      gst,
+      emoji,
+      supplier,
+      skuCode: sku,
+      storageLocation: loc,
+      qrCodeImage
     });
 
     if (qty > 0) {
@@ -108,9 +123,20 @@ class InventoryService {
     const newQty = qty !== undefined ? Number(qty) : oldItem.qty;
     const delta = newQty - oldItem.qty;
 
+    const updateFields = { ...otherFields };
+    if (otherFields.sku !== undefined) {
+      updateFields.skuCode = otherFields.sku;
+      if (otherFields.sku !== oldItem.sku) {
+        updateFields.qrCodeImage = await QRCode.toDataURL(otherFields.sku);
+      }
+    }
+    if (otherFields.loc !== undefined) {
+      updateFields.storageLocation = otherFields.loc;
+    }
+
     const updatedItem = await Inventory.findByIdAndUpdate(
       id,
-      { ...otherFields, qty: newQty },
+      { ...updateFields, qty: newQty },
       { new: true, runValidators: true }
     );
 
@@ -264,6 +290,46 @@ class InventoryService {
       }
     } catch (err) {
       console.error('Failed to audit stock alerts:', err.message);
+    }
+  }
+
+  async upgradeExistingItems() {
+    try {
+      const items = await Inventory.find({
+        $or: [
+          { skuCode: { $exists: false } },
+          { storageLocation: { $exists: false } },
+          { qrCodeImage: { $exists: false } },
+          { skuCode: null },
+          { storageLocation: null },
+          { qrCodeImage: null }
+        ]
+      });
+
+      if (items.length > 0) {
+        console.log(`🔄 Upgrading ${items.length} existing inventory items with QR codes & schema extensions...`);
+        for (const item of items) {
+          let updated = false;
+          if (!item.skuCode) {
+            item.skuCode = item.sku;
+            updated = true;
+          }
+          if (!item.storageLocation) {
+            item.storageLocation = item.loc;
+            updated = true;
+          }
+          if (!item.qrCodeImage) {
+            item.qrCodeImage = await QRCode.toDataURL(item.sku);
+            updated = true;
+          }
+          if (updated) {
+            await item.save();
+          }
+        }
+        console.log(`✅ Upgrade migration complete for ${items.length} items.`);
+      }
+    } catch (err) {
+      console.error('Failed to run schema upgrade migration:', err);
     }
   }
 }

@@ -7,7 +7,20 @@ class NotificationService {
 
   async createNotification(notificationData) {
     const { title, message, type, itemId } = notificationData;
-    return await Notification.create({ title, message, type, itemId });
+    const notification = await Notification.create({ title, message, type, itemId });
+
+    // Broadcast to all connected clients for real-time updates
+    try {
+      const socketManager = require('../socket/escalationSocket');
+      const io = socketManager.getIO();
+      if (io) {
+        io.emit('notification:new', { notification });
+      }
+    } catch (e) {
+      // Socket not available — silent fail, polling will catch it
+    }
+
+    return notification;
   }
 
   async markAsRead(id) {
@@ -50,6 +63,10 @@ class NotificationService {
 
   async clearAllNotifications() {
     await Notification.deleteMany({});
+    return true;
+  }
+  async markAllAsRead() {
+    await Notification.updateMany({ isRead: false }, { isRead: true });
     return true;
   }
 }

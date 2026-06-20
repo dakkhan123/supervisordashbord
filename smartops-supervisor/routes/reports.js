@@ -26,6 +26,8 @@ notificationsRouter.route('/')
   .get(notificationController.getAllNotifications);
 notificationsRouter.route('/clear')
   .delete(notificationController.clearAllNotifications);
+notificationsRouter.route('/mark-all-read')
+  .put(notificationController.markAllAsRead);
 notificationsRouter.route('/:id/read')
   .put(notificationController.markAsRead);
 notificationsRouter.route('/:id/unread')

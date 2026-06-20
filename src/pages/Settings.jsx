@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 
 // ─── NotificationTab sub-component ────────────────────────────────────────────
@@ -212,7 +213,13 @@ const NotificationTab = ({ notifications, showToast, onRefreshNotifications }) =
 
 
 const Settings = ({ showToast, notifications, onRefreshNotifications }) => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    if (location.state && location.state.tab) {
+      return location.state.tab;
+    }
+    return 'profile';
+  });
 
   // Load from localStorage or defaults
   const [profile, setProfile] = useState(() => {
