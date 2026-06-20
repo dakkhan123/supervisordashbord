@@ -34,10 +34,6 @@ const AlertSchema = new mongoose.Schema({
   muted: {
     type: Boolean,
     default: false
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
 }, {
   timestamps: true

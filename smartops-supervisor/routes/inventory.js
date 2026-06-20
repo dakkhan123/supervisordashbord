@@ -75,6 +75,14 @@ inventoryRouter.route('/')
   .post(validateItemBody, inventoryController.createItem);
 inventoryRouter.route('/reorder')
   .post(validateReorderBody, inventoryController.reorderItem);
+inventoryRouter.route('/generate-qr')
+  .post(inventoryController.generateQr);
+inventoryRouter.route('/search')
+  .get(inventoryController.searchItems);
+inventoryRouter.route('/sku/:sku')
+  .get(inventoryController.getItemBySku);
+inventoryRouter.route('/:id/qr')
+  .get(inventoryController.getItemQr);
 inventoryRouter.route('/:id')
   .get(inventoryController.getItemById)
   .put(validateItemBody, inventoryController.updateItem)

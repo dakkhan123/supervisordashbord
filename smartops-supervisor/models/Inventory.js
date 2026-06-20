@@ -52,11 +52,35 @@ const InventorySchema = new mongoose.Schema({
   supplier: {
     type: String,
     trim: true
+  },
+  skuCode: {
+    type: String,
+    unique: true,
+    trim: true,
+    sparse: true
+  },
+  storageLocation: {
+    type: String,
+    trim: true
+  },
+  qrCodeImage: {
+    type: String
   }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
+});
+
+// Middleware to sync fields before save
+InventorySchema.pre('save', function(next) {
+  if (this.sku) {
+    this.skuCode = this.sku;
+  }
+  if (this.loc) {
+    this.storageLocation = this.loc;
+  }
+  next();
 });
 
 // Virtual for calculating the status of an item dynamically

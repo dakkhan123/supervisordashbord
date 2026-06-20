@@ -10,11 +10,12 @@ class PerformanceService {
    */
   async getKPISummary(from, to) {
     const dateFilter = this._buildDateFilter(from, to);
+    const hasFilter = Object.keys(dateFilter).length > 0;
 
     const [workers, tasks, attendance, inventory] = await Promise.all([
       Worker.find({ status: 'Active' }),
-      Task.find(dateFilter.createdAt ? { createdAt: dateFilter } : {}),
-      Attendance.find(dateFilter.date ? { date: dateFilter } : {}),
+      Task.find(hasFilter ? { createdAt: dateFilter } : {}),
+      Attendance.find(hasFilter ? { date: dateFilter } : {}),
       Inventory.find()
     ]);
 
@@ -61,11 +62,12 @@ class PerformanceService {
    */
   async getWorkerPerformance(from, to) {
     const dateFilter = this._buildDateFilter(from, to);
+    const hasFilter = Object.keys(dateFilter).length > 0;
 
     const [workers, tasks, attendance] = await Promise.all([
       Worker.find({ status: 'Active' }),
-      Task.find(dateFilter.createdAt ? { createdAt: dateFilter } : {}).populate('assignedTo'),
-      Attendance.find(dateFilter.date ? { date: dateFilter } : {}).populate('worker')
+      Task.find(hasFilter ? { createdAt: dateFilter } : {}).populate('assignedTo'),
+      Attendance.find(hasFilter ? { date: dateFilter } : {}).populate('worker')
     ]);
 
     const workerStats = workers.map(worker => {
@@ -143,7 +145,8 @@ class PerformanceService {
    */
   async getTaskTrend(from, to, granularity = 'daily') {
     const dateFilter = this._buildDateFilter(from, to);
-    const tasks = await Task.find(dateFilter.createdAt ? { createdAt: dateFilter } : {});
+    const hasFilter = Object.keys(dateFilter).length > 0;
+    const tasks = await Task.find(hasFilter ? { createdAt: dateFilter } : {});
 
     // Group by time bucket
     const buckets = {};
@@ -177,10 +180,11 @@ class PerformanceService {
    */
   async getAttendanceHeatmap(from, to) {
     const dateFilter = this._buildDateFilter(from, to);
+    const hasFilter = Object.keys(dateFilter).length > 0;
 
     const [workers, attendance] = await Promise.all([
       Worker.find({ status: 'Active' }).sort({ name: 1 }),
-      Attendance.find(dateFilter.date ? { date: dateFilter } : {}).populate('worker')
+      Attendance.find(hasFilter ? { date: dateFilter } : {}).populate('worker')
     ]);
 
     // Build unique date list
@@ -217,7 +221,8 @@ class PerformanceService {
    */
   async getTaskDistribution(from, to) {
     const dateFilter = this._buildDateFilter(from, to);
-    const tasks = await Task.find(dateFilter.createdAt ? { createdAt: dateFilter } : {});
+    const hasFilter = Object.keys(dateFilter).length > 0;
+    const tasks = await Task.find(hasFilter ? { createdAt: dateFilter } : {});
 
     const completed = tasks.filter(t => t.status === 'Completed').length;
     const inProgress = tasks.filter(t => t.status === 'In Progress').length;
@@ -260,16 +265,13 @@ class PerformanceService {
 
   _buildDateFilter(from, to) {
     const filter = {};
-    if (from || to) {
-      const dateRange = {};
-      if (from) dateRange.$gte = new Date(from);
-      if (to) {
-        const endDate = new Date(to);
-        endDate.setHours(23, 59, 59, 999);
-        dateRange.$lte = endDate;
-      }
-      filter.$gte = dateRange.$gte;
-      filter.$lte = dateRange.$lte;
+    if (from) {
+      filter.$gte = new Date(from);
+    }
+    if (to) {
+      const endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
+      filter.$lte = endDate;
     }
     return filter;
   }

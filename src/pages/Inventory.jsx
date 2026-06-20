@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { DeleteConfirmModal } from '../components/Modals';
 
 const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderClick, refreshTrigger, triggerRefresh }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -330,6 +331,9 @@ const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderCli
         <div className="flex gap-2.5 flex-wrap">
           <button className="btn btn-outline flex items-center gap-2 px-4 py-2 border border-primary/20 hover:bg-primary/5 text-primary text-xs font-semibold rounded-sm transition-colors duration-150" onClick={handleExportCSV}>
             <span className="material-symbols-outlined icon-xs text-primary">download</span>Export CSV
+          </button>
+          <button className="btn btn-outline flex items-center gap-2 px-4 py-2 border border-outline-variant hover:bg-surface-low text-on-surface-variant text-xs font-semibold rounded-sm transition-colors duration-150" onClick={() => navigate('/scan')}>
+            <span className="material-symbols-outlined icon-xs">qr_code_scanner</span>Scan Item QR
           </button>
           <button className="btn btn-primary flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-sm hover:bg-primary-container transition-colors duration-150" onClick={() => onAddClick()}>
             <span className="material-symbols-outlined icon-xs text-white">add</span>Add Item

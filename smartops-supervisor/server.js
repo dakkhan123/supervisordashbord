@@ -12,7 +12,10 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Database Connection
 const connectDB = require('./config/db');
-connectDB();
+connectDB().then(() => {
+  const inventoryService = require('./services/inventoryService');
+  inventoryService.upgradeExistingItems();
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -48,20 +51,24 @@ const { router: attendanceRouter, workersRouter } = require('./routes/attendance
 const salaryRouter = require('./routes/salary');
 const escalationsRouter = require('./routes/escalations');
 const performanceRouter = require('./routes/performance');
+const authRouter = require('./routes/auth');
+const authMiddleware = require('./middleware/auth');
 
 // Mount Routers
-app.use('/api/inventory', inventoryRouter);
-app.use('/api/history', historyRouter);
-app.use('/api/restock-requests', restockRouter);
-app.use('/api/reports', reportsRouter);
-app.use('/api/alerts', alertsRouter);
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/tasks', tasksRouter);
-app.use('/api/attendance', attendanceRouter);
-app.use('/api/workers', workersRouter);
-app.use('/api/salary', salaryRouter);
-app.use('/api/escalations', escalationsRouter);
-app.use('/api/performance', performanceRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/inventory', authMiddleware, inventoryRouter);
+app.use('/api/history', authMiddleware, historyRouter);
+app.use('/api/restock-requests', authMiddleware, restockRouter);
+app.use('/api/reports', authMiddleware, reportsRouter);
+app.use('/api/alerts', authMiddleware, alertsRouter);
+app.use('/api/notifications', authMiddleware, notificationsRouter);
+app.use('/api/tasks', authMiddleware, tasksRouter);
+app.use('/api/attendance', authMiddleware, attendanceRouter);
+app.use('/api/workers', authMiddleware, workersRouter);
+app.use('/api/salary', authMiddleware, salaryRouter);
+app.use('/api/escalations', authMiddleware, escalationsRouter);
+app.use('/api/performance', authMiddleware, performanceRouter);
+
 
 // Health check endpoints
 app.get('/health', (req, res) => {
