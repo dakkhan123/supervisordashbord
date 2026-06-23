@@ -4,14 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run dev --prefix frontend",
-    "dev:frontend": "npm run dev --prefix frontend",
-    "dev:server": "node backend/server.js",
-    "dev:all": "concurrently --kill-others-on-fail --names \"SERVER,FRONTEND\" --prefix-colors \"yellow,cyan\" \"npm run dev:server\" \"npm run dev:frontend\"",
-    "start": "node scripts/startup.js",
-    "build": "npm run build --prefix frontend",
-    "lint": "npm run lint --prefix frontend",
-    "preview": "npm run preview --prefix frontend"
+    "dev": "vite --port 5173 --strictPort false",
+    "dev:frontend": "vite --port 5173 --strictPort false",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
     "axios": "^1.17.0",

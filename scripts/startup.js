@@ -30,35 +30,35 @@ function log(prefix, message, color = colors.reset) {
 
 // 1. Copy .env if missing
 function ensureEnv() {
-  const envPath = path.join(rootDir, 'smartops-supervisor', '.env');
-  const envExamplePath = path.join(rootDir, 'smartops-supervisor', '.env.example');
+  const envPath = path.join(rootDir, 'backend', '.env');
+  const envExamplePath = path.join(rootDir, 'backend', '.env.example');
   if (!fs.existsSync(envPath)) {
     if (fs.existsSync(envExamplePath)) {
-      console.log(`${colors.green}[SYSTEM]${colors.reset} Copying smartops-supervisor/.env.example to smartops-supervisor/.env...`);
+      console.log(`${colors.green}[SYSTEM]${colors.reset} Copying backend/.env.example to backend/.env...`);
       fs.copyFileSync(envExamplePath, envPath);
     } else {
-      console.log(`${colors.red}[SYSTEM] ERROR:${colors.reset} Neither smartops-supervisor/.env nor smartops-supervisor/.env.example exists!`);
+      console.log(`${colors.red}[SYSTEM] ERROR:${colors.reset} Neither backend/.env nor backend/.env.example exists!`);
     }
   } else {
-    console.log(`${colors.green}[SYSTEM]${colors.reset} smartops-supervisor/.env file found.`);
+    console.log(`${colors.green}[SYSTEM]${colors.reset} backend/.env file found.`);
   }
 }
 
 // 2. Validate and install dependencies
 function ensureDependencies() {
-  const rootNodeModules = path.join(rootDir, 'node_modules');
-  const serverNodeModules = path.join(rootDir, 'smartops-supervisor', 'node_modules');
+  const rootNodeModules = path.join(rootDir, 'frontend', 'node_modules');
+  const serverNodeModules = path.join(rootDir, 'backend', 'node_modules');
 
   if (!fs.existsSync(rootNodeModules)) {
-    console.log(`${colors.green}[SYSTEM]${colors.reset} Root node_modules not found. Installing frontend dependencies...`);
-    execSync('npm install', { cwd: rootDir, stdio: 'inherit' });
+    console.log(`${colors.green}[SYSTEM]${colors.reset} Frontend node_modules not found. Installing frontend dependencies...`);
+    execSync('npm install', { cwd: path.join(rootDir, 'frontend'), stdio: 'inherit' });
   } else {
     console.log(`${colors.green}[SYSTEM]${colors.reset} Frontend dependencies already installed.`);
   }
 
   if (!fs.existsSync(serverNodeModules)) {
     console.log(`${colors.green}[SYSTEM]${colors.reset} Server node_modules not found. Installing backend dependencies...`);
-    execSync('npm install', { cwd: path.join(rootDir, 'smartops-supervisor'), stdio: 'inherit' });
+    execSync('npm install', { cwd: path.join(rootDir, 'backend'), stdio: 'inherit' });
   } else {
     console.log(`${colors.green}[SYSTEM]${colors.reset} Backend dependencies already installed.`);
   }
@@ -159,14 +159,14 @@ async function startApp() {
   console.log(`\n${colors.green}[SYSTEM] Starting backend and frontend processes...${colors.reset}\n`);
 
   // Start backend
-  const backend = spawn('node', ['smartops-supervisor/server.js'], { 
+  const backend = spawn('node', ['backend/server.js'], { 
     cwd: rootDir,
     env: { ...process.env }
   });
 
   // Start frontend
   const frontend = spawn('npx', ['vite', '--port', '5173', '--strictPort', 'false'], { 
-    cwd: rootDir,
+    cwd: path.join(rootDir, 'frontend'),
     shell: true
   });
 

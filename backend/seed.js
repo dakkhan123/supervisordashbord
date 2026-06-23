@@ -3,7 +3,8 @@ const dotenv = require('dotenv');
 const Inventory = require('./models/Inventory');
 const InventoryHistory = require('./models/StockTransaction');
 
-dotenv.config();
+const path = require('path');
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const items = [
   { name: 'Exide Lithium Battery 4000mAh',       sku: 'BAT-EX-4000-X',  cat: 'Electronics', qty: 124,  threshold: 250,  loc: 'Rack D-05, Pune',      val: 850,  gst: 18, emoji: '🔋', supplier: 'Tata Electronics Supply Co., Mumbai' },
@@ -42,8 +43,13 @@ const historyEntries = [
 ];
 
 const seedDB = async () => {
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    console.error('🔴 Error: MONGO_URI is not defined in the environment variables.');
+    process.exit(1);
+  }
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smartops');
+    await mongoose.connect(uri);
     console.log('Connected to MongoDB for seeding...');
     
     // Clear existing

@@ -1,7 +1,11 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smartops';
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    console.error('🔴 Error: MONGO_URI is not defined in the environment variables.');
+    process.exit(1);
+  }
   const MAX_RETRIES = 5;
   const RETRY_DELAY_MS = 3000;
 
