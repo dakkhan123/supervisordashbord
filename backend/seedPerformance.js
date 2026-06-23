@@ -8,8 +8,13 @@ const Attendance = require('./models/Attendance');
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const seedPerformanceData = async () => {
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    console.error('🔴 Error: MONGO_URI is not defined in the environment variables.');
+    process.exit(1);
+  }
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smartops');
+    await mongoose.connect(uri);
     console.log('Connected to MongoDB for performance seeding...');
 
     // Clear existing performance data
