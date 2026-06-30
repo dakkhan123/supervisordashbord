@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 
 const PerformanceReports = ({ searchVal, showToast, refreshTrigger }) => {
@@ -232,7 +232,7 @@ const PerformanceReports = ({ searchVal, showToast, refreshTrigger }) => {
               <div className="p-5">
                 {taskTrend.length > 0 ? (
                   <div className="flex items-end gap-2 h-[200px] pb-8 relative">
-                    {taskTrend.map((t, i) => (
+                    {taskTrend.map((t) => (
                       <div key={t.date} className="flex-1 flex flex-col items-center justify-end h-full relative group">
                         <div className="w-full flex items-end gap-0.5 justify-center">
                           <div className="w-2 md:w-3 bg-gradient-to-t from-primary/70 to-primary rounded-t-sm hover:brightness-110 cursor-pointer"

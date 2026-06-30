@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
@@ -250,7 +250,6 @@ export function NotificationDrawer({ isOpen, onClose, notifications, onRefresh, 
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(Date.now());
   const drawerRef = useRef(null);
   const intervalRef = useRef(null);
 
@@ -258,10 +257,8 @@ export function NotificationDrawer({ isOpen, onClose, notifications, onRefresh, 
   useEffect(() => {
     if (isOpen) {
       onRefresh();
-      setLastRefresh(Date.now());
       intervalRef.current = setInterval(() => {
         onRefresh();
-        setLastRefresh(Date.now());
       }, 10000);
     }
     return () => {
@@ -302,7 +299,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications, onRefresh, 
         ? await api.markNotificationRead(id)
         : await api.markNotificationUnread(id);
       if (res.success) onRefresh();
-    } catch (err) {
+    } catch {
       showToast('Failed to update notification', 'error');
     } finally {
       setUpdatingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
@@ -318,7 +315,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications, onRefresh, 
         showToast('Notification deleted', 'success');
         if (detailNotif?._id === id) setDetailNotif(null);
       }
-    } catch (err) {
+    } catch {
       showToast('Failed to delete notification', 'error');
     } finally {
       setDeletingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
@@ -335,7 +332,7 @@ export function NotificationDrawer({ isOpen, onClose, notifications, onRefresh, 
         onRefresh();
         showToast(`Marked ${unread.length} notification${unread.length > 1 ? 's' : ''} as read`, 'success');
       }
-    } catch (err) {
+    } catch {
       showToast('Failed to mark all as read', 'error');
     } finally {
       setIsMarkingAll(false);
@@ -350,14 +347,13 @@ export function NotificationDrawer({ isOpen, onClose, notifications, onRefresh, 
         setConfirmClearAll(false);
         showToast('All notifications cleared', 'success');
       }
-    } catch (err) {
+    } catch {
       showToast('Failed to clear notifications', 'error');
     }
   };
 
   const manualRefresh = () => {
     onRefresh();
-    setLastRefresh(Date.now());
     showToast('Notifications refreshed', 'success');
   };
 

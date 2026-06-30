@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 
-const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerRefresh }) => {
+const Alerts = ({ showToast, onReorderClick, refreshTrigger, triggerRefresh }) => {
   const location = useLocation();
   const [activeAlerts, setActiveAlerts] = useState([]);
   const [resolvedAlerts, setResolvedAlerts] = useState([]);
@@ -200,11 +200,6 @@ const Alerts = ({ searchVal, showToast, onReorderClick, refreshTrigger, triggerR
   const lowAlerts = activeAlerts.filter(a => a.type === 'low');
   const pendingRequests = restockRequests.filter(r => r.status === 'pending');
 
-  // Filter category schemas
-  const filterByCat = (list) => {
-    if (!filterCategory) return list;
-    return list; // In active alert we only have item & sku, to query category we match names or default
-  };
 
   // Helper date formatter (Indian standard DD/MM/YYYY HH:MM)
   const formatDateTime = (dateStr) => {

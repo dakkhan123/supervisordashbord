@@ -102,25 +102,14 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
-  // Filter items based on top search bar (if searchVal is used)
-  const displayItems = items.filter(item => {
-    if (!searchVal) return true;
-    const q = searchVal.toLowerCase();
-    return item.name.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q);
-  });
+
 
   // Calculate KPIs
   const totalItems = items.length;
-  const stockQuantity = items.reduce((sum, item) => sum + item.qty, 0);
   const lowStockCount = items.filter(item => item.status === 'critical' || item.status === 'low').length;
-  const nearLimitCount = items.filter(item => item.status === 'near').length;
   const availabilityPct = totalItems > 0 ? Math.round((items.filter(item => item.qty > 0).length / totalItems) * 100) : 100;
   const totalValueINR = items.reduce((sum, item) => sum + (item.qty * item.val), 0);
-  const dailyMovementCount = history.filter(h => {
-    const today = new Date();
-    const hDate = new Date(h.date);
-    return today.toDateString() === hDate.toDateString();
-  }).reduce((sum, h) => sum + h.qty, 0);
+
 
   // Calculate Supervisor KPIs
   const activeWorkersList = workers.filter(w => w.status === 'Active');
@@ -635,7 +624,7 @@ const Dashboard = ({ searchVal, showToast, onReorderClick, refreshTrigger }) => 
           </div>
           <div className="p-5 flex-1 overflow-y-auto max-h-[360px]">
             <div className="flex flex-col">
-              {history.slice(0, 5).map((log, i) => {
+              {history.slice(0, 5).map((log) => {
                 const isTypeIn = log.type === 'in';
                 const feedIcon = isTypeIn ? 'add_circle' : 'local_shipping';
                 const feedColor = isTypeIn ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary';
