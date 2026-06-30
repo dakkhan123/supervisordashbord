@@ -269,6 +269,7 @@ function AppContent() {
                   showToast={showToast}
                   notifications={notifications}
                   onBellClick={() => setNotificationDrawerOpen(true)}
+                  user={user}
                 />
 
                 <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-[1600px] mx-auto w-full">

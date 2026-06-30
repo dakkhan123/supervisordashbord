@@ -1,8 +1,24 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
+import UserAvatar from './UserAvatar';
+import { useProfilePhoto } from '../hooks/useProfilePhoto';
 
 const Sidebar = ({ mobileOpen, setMobileOpen, alertCount = 0, user, onLogout }) => {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const fileInputRef = useRef(null);
+  const { updatePhoto } = useProfilePhoto(user?.id);
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        updatePhoto(event.target.result);
+        setProfileMenuOpen(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   return (
     <>
       {/* Mobile Drawer Overlay */}
@@ -147,6 +163,13 @@ const Sidebar = ({ mobileOpen, setMobileOpen, alertCount = 0, user, onLogout }) 
           {profileMenuOpen && (
             <div className="absolute bottom-full left-3 right-3 mb-2 bg-[#213145] border border-white/8 rounded-lg p-1 shadow-lg animate-scale-up z-[110]">
               <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-primary-fixed hover:bg-white/8 rounded transition-colors text-left"
+              >
+                <span className="material-symbols-outlined icon-xs">add_a_photo</span>
+                Change Photo
+              </button>
+              <button 
                 onClick={() => {
                   setProfileMenuOpen(false);
                   if (onLogout) onLogout();
@@ -156,19 +179,25 @@ const Sidebar = ({ mobileOpen, setMobileOpen, alertCount = 0, user, onLogout }) 
                 <span className="material-symbols-outlined icon-xs">logout</span>
                 Sign Out
               </button>
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={fileInputRef} 
+                onChange={handlePhotoUpload} 
+                className="hidden" 
+              />
             </div>
           )}
           <div 
             onClick={() => setProfileMenuOpen(!profileMenuOpen)}
             className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-white/8 cursor-pointer transition-colors duration-150"
           >
-            <img 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAU-lK8Rt-Mqj93-xCpACNwQ-w7_va6xnQRFKMlPLvp5sHzwBCrsDMpFCUVAjyc0KQo7-gZU2n-alm2et-5XWaa1E2mivdJp8gSVecU00X_NVBlohuHDna54ecaKYZsEAKMFPL-Y2ZOZCECQlwF-48OeQBfg5Sp3qCKSUk_0UsUzZxDXq7ZFTPdrhwngLgXfLRCSMGyv2AYWO-y_TbPMGktVfguTkGaNsesahlCDRLkdOC-kSZNXRWnUX9jV8sGEoQnUAbnSSrWAU0" 
-              className="w-8 h-8 rounded-full object-cover border-2 border-primary-container"
-              alt={`Supervisor ${user?.worker?.name || 'Rajesh Kumar'}`}
+            <UserAvatar 
+              user={user} 
+              className="w-8 h-8 rounded-full object-cover border-2 border-primary-container text-[12px] flex-shrink-0 overflow-hidden" 
             />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-primary-fixed truncate">{user?.worker?.name || 'Rajesh Kumar'}</p>
+              <p className="text-xs font-semibold text-primary-fixed truncate">{user?.worker?.name || user?.username || 'User'}</p>
               <span className="text-[10px] text-secondary-fixed-dim/70 opacity-70 block truncate">
                 {user?.role || 'Supervisor'} · Pune-A12
               </span>
