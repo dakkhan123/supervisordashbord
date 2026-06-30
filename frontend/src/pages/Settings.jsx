@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 
@@ -244,15 +244,6 @@ const Settings = ({ showToast, notifications, onRefreshNotifications }) => {
     };
   });
 
-  const [notificationSettings, setNotificationSettings] = useState(() => {
-    const saved = localStorage.getItem('smartops_notifications');
-    return saved ? JSON.parse(saved) : {
-      criticalEmail: true,
-      dispatchSMS: true,
-      weeklyReport: false,
-      whatsappAlerts: true
-    };
-  });
 
   const [gstConfig, setGstConfig] = useState(() => {
     const saved = localStorage.getItem('smartops_gst');
@@ -277,10 +268,6 @@ const Settings = ({ showToast, notifications, onRefreshNotifications }) => {
     }));
   };
 
-  const handleNotificationChange = (e) => {
-    const { id, checked } = e.target;
-    setNotificationSettings(prev => ({ ...prev, [id]: checked }));
-  };
 
 
   const handleGstChange = (e) => {

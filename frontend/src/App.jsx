@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
@@ -86,7 +86,7 @@ function AppContent() {
       if (res.success) {
         setAlertCount(res.data.length);
       }
-    } catch (err) {
+    } catch {
       // silent fail
     }
   };

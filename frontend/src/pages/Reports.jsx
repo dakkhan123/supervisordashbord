@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 
-const Reports = ({ searchVal, showToast, refreshTrigger }) => {
+const Reports = ({ showToast, refreshTrigger }) => {
   const [history, setHistory] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
