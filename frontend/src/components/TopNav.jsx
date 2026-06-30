@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { NotificationBell } from './NotificationDrawer';
+import UserAvatar from './UserAvatar';
 
-const TopNav = ({ title, breadcrumb, searchVal, setSearchVal, setMobileOpen, showToast, notifications, onBellClick }) => {
+const TopNav = ({ title, breadcrumb, searchVal, setSearchVal, setMobileOpen, showToast, notifications, onBellClick, user }) => {
   const navigate = useNavigate();
 
   const handleSearchKeyDown = (e) => {
@@ -60,13 +61,12 @@ const TopNav = ({ title, breadcrumb, searchVal, setSearchVal, setMobileOpen, sho
 
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/settings')}>
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold text-on-surface leading-tight">Rajesh Kumar</p>
-            <span className="text-[10px] text-outline uppercase tracking-wider">Unit Pune-A12</span>
+            <p className="text-xs font-semibold text-on-surface leading-tight">{user?.worker?.name || user?.username || 'User'}</p>
+            <span className="text-[10px] text-outline uppercase tracking-wider">{user?.role === 'Worker' ? 'Staff' : 'Unit Pune-A12'}</span>
           </div>
-          <img 
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAU-lK8Rt-Mqj93-xCpACNwQ-w7_va6xnQRFKMlPLvp5sHzwBCrsDMpFCUVAjyc0KQo7-gZU2n-alm2et-5XWaa1E2mivdJp8gSVecU00X_NVBlohuHDna54ecaKYZsEAKMFPL-Y2ZOZCECQlwF-48OeQBfg5Sp3qCKSUk_0UsUzZxDXq7ZFTPdrhwngLgXfLRCSMGyv2AYWO-y_TbPMGktVfguTkGaNsesahlCDRLkdOC-kSZNXRWnUX9jV8sGEoQnUAbnSSrWAU0" 
-            className="w-9 h-9 rounded-full object-cover border border-outline-variant"
-            alt="User avatar"
+          <UserAvatar 
+            user={user} 
+            className="w-9 h-9 rounded-full object-cover border border-outline-variant text-[14px] flex-shrink-0 overflow-hidden" 
           />
         </div>
       </div>
