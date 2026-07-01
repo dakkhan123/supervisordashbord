@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
-import UserAvatar from '../components/UserAvatar';
+import UserAvatar, { getInitials } from '../components/UserAvatar';
 import { useProfilePhoto } from '../hooks/useProfilePhoto';
 
 // ─── NotificationTab sub-component ────────────────────────────────────────────
@@ -214,7 +214,7 @@ const NotificationTab = ({ notifications, showToast, onRefreshNotifications }) =
 // ──────────────────────────────────────────────────────────────────────────────
 
 
-const Settings = ({ showToast, notifications, onRefreshNotifications, user }) => {
+const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLogout }) => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
     if (location.state && location.state.tab) {
@@ -222,6 +222,10 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user }) =>
     }
     return 'profile';
   });
+
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editProfileData, setEditProfileData] = useState({});
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
   // Load from localStorage or defaults
   const [profile, setProfile] = useState(() => {
@@ -257,14 +261,14 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user }) =>
   });
 
   const fileInputRef = useRef(null);
-  const { updatePhoto } = useProfilePhoto(user?.id);
+  const { photo, updatePhoto } = useProfilePhoto(user?.id);
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        updatePhoto(event.target.result);
+        setEditProfileData(prev => ({...prev, photoPreview: event.target.result, photoChanged: true}));
       };
       reader.readAsDataURL(file);
     }
@@ -301,7 +305,6 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user }) =>
 
   const tabs = [
     { id: 'profile', label: 'User Profile', icon: 'person' },
-    { id: 'reorder', label: 'Auto-Reorder Limits', icon: 'settings_backup_restore' },
     { id: 'notifications', label: 'Notifications', icon: 'notifications_active' },
     { id: 'gst', label: 'GST & Compliance', icon: 'gavel' }
   ];
@@ -309,11 +312,22 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user }) =>
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-extrabold text-on-surface tracking-tight">System Settings</h1>
-        <p className="text-on-surface-variant text-sm">
-          Manage system configurations, alert policies, GST settings, and supervisor credentials.
-        </p>
+      <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-extrabold text-on-surface tracking-tight">System Settings</h1>
+          <p className="text-on-surface-variant text-sm">
+            Manage system configurations, alert policies, GST settings, and supervisor credentials.
+          </p>
+        </div>
+        <div 
+          className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-outline-variant cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0 shadow-sm"
+          onClick={() => setIsPhotoModalOpen(true)}
+        >
+          <UserAvatar 
+            user={user} 
+            className="w-full h-full object-cover text-2xl"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
@@ -338,6 +352,15 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user }) =>
               </button>
             );
           })}
+          <div className="mt-4 pt-4 border-t border-outline-variant">
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-sm transition-all text-left text-error hover:bg-error/10"
+            >
+              <span className="material-symbols-outlined icon-sm text-error">logout</span>
+              Sign Out
+            </button>
+          </div>
         </div>
 
         {/* Configuration Body */}
@@ -346,195 +369,65 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user }) =>
             <div className="bg-surface-lowest border border-outline-variant rounded-md shadow-sm overflow-hidden animate-scale-up">
               <div className="px-5 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-low">
                 <h2 className="text-base font-bold text-on-surface">Supervisor Profile Details</h2>
-                <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">Active Unit</span>
+                <button
+                  onClick={() => {
+                    setEditProfileData({ ...profile, photoPreview: photo, photoChanged: false });
+                    setIsEditProfileOpen(true);
+                  }}
+                  className="btn btn-outline border-outline-variant hover:bg-surface-low text-xs font-bold px-3 py-1.5 rounded-sm uppercase flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined icon-xs">edit</span> Edit Profile
+                </button>
               </div>
               <div className="p-6 flex flex-col gap-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Supervisor Name</label>
-                    <input
-                      type="text"
-                      id="name"
-                      value={profile.name}
-                      onChange={handleProfileChange}
-                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                    />
+                    <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
+                      {profile.name}
+                    </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Email Address</label>
-                    <input
-                      type="email"
-                      id="email"
-                      value={profile.email}
-                      onChange={handleProfileChange}
-                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                    />
+                    <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
+                      {profile.email}
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Mobile Number (+91)</label>
-                    <input
-                      type="text"
-                      id="phone"
-                      value={profile.phone}
-                      onChange={handleProfileChange}
-                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                    />
+                    <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
+                      {profile.phone}
+                    </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Assigned Role</label>
-                    <input
-                      type="text"
-                      id="role"
-                      value={profile.role}
-                      disabled
-                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface-variant outline-none opacity-60 cursor-not-allowed"
-                    />
+                    <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
+                      {profile.role}
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Assigned Unit / Warehouse</label>
-                  <input
-                    type="text"
-                    id="unit"
-                    value={profile.unit}
-                    disabled
-                    className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface-variant outline-none opacity-60 cursor-not-allowed"
-                  />
+                  <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
+                    {profile.unit}
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Unit Mailing Address</label>
-                  <textarea
-                    id="address"
-                    value={profile.address}
-                    onChange={handleProfileChange}
-                    rows="2"
-                    className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
-                  ></textarea>
-                </div>
-
-                <div className="flex flex-col gap-1.5 mt-2">
-                  <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Profile Photo</label>
-                  <div 
-                    className="relative w-24 h-24 rounded-full overflow-hidden border border-outline-variant group cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <UserAvatar 
-                      user={user} 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="material-symbols-outlined text-white text-[20px]">add_a_photo</span>
-                      <span className="text-[9px] font-bold text-white uppercase mt-1">Change</span>
-                    </div>
+                  <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold min-h-[52px]">
+                    {profile.address}
                   </div>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    ref={fileInputRef} 
-                    onChange={handlePhotoUpload} 
-                    className="hidden" 
-                  />
-                  <span className="text-[10px] text-outline mt-1">Click the image to update your profile photo.</span>
-                </div>
-
-                <div className="pt-2 border-t border-outline-variant/30 flex justify-end mt-2">
-                  <button
-                    onClick={() => saveSettings('profile', profile)}
-                    className="btn btn-primary bg-primary text-white font-semibold rounded-sm px-4 py-2 hover:bg-primary-container transition-colors flex items-center gap-1.5 text-xs uppercase"
-                  >
-                    <span className="material-symbols-outlined icon-xs text-white">save</span>Save Profile
-                  </button>
                 </div>
               </div>
             </div>
           )}
 
-          {activeTab === 'reorder' && (
-            <div className="bg-surface-lowest border border-outline-variant rounded-md shadow-sm overflow-hidden animate-scale-up">
-              <div className="px-5 py-4 border-b border-outline-variant bg-surface-low">
-                <h2 className="text-base font-bold text-on-surface">Auto-Reorder & Threshold Rules</h2>
-              </div>
-              <div className="p-6 flex flex-col gap-5">
-                <div className="flex items-center justify-between p-3.5 bg-primary/5 border border-primary/20 rounded-md">
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-primary uppercase">Enable Automated Reordering</p>
-                    <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                      Automatically place replenishment orders when stock quantity drops below safety thresholds.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="autoTrigger"
-                      checked={thresholds.autoTrigger}
-                      onChange={handleThresholdChange}
-                      className="sr-only peer"
-                    />
-                    <div className="w-10 h-5 bg-outline-variant rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Safety Threshold Margin (%)</label>
-                    <input
-                      type="number"
-                      id="safetyPct"
-                      value={thresholds.safetyPct}
-                      onChange={handleThresholdChange}
-                      min="5"
-                      max="100"
-                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                    />
-                    <span className="text-[10px] text-outline">Defines default limit: e.g. 20% of maximum safety level.</span>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Reorder Qty Multiplier</label>
-                    <input
-                      type="number"
-                      id="defaultMultiplier"
-                      value={thresholds.defaultMultiplier}
-                      onChange={handleThresholdChange}
-                      min="1"
-                      max="10"
-                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                    />
-                    <span className="text-[10px] text-outline">Reorder quantity = (Safety Threshold − Current Stock) × Multiplier.</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Primary Electronics Supplier</label>
-                  <select
-                    id="primarySupplier"
-                    value={thresholds.primarySupplier}
-                    onChange={handleThresholdChange}
-                    className="w-full px-3 py-2.5 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                  >
-                    <option value="Tata Electronics Supply Co., Mumbai (Primary)">Tata Electronics Supply Co., Mumbai (Primary)</option>
-                    <option value="Bharat Components Ltd., Pune">Bharat Components Ltd., Pune</option>
-                    <option value="Havells India Ltd., Noida">Havells India Ltd., Noida</option>
-                    <option value="Polycab India, Halol">Polycab India, Halol</option>
-                  </select>
-                </div>
-
-                <div className="pt-2 border-t border-outline-variant/30 flex justify-end">
-                  <button
-                    onClick={() => saveSettings('thresholds', thresholds)}
-                    className="btn btn-primary bg-primary text-white font-semibold rounded-sm px-4 py-2 hover:bg-primary-container transition-colors flex items-center gap-1.5 text-xs uppercase"
-                  >
-                    <span className="material-symbols-outlined icon-xs text-white">save</span>Save Thresholds
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'notifications' && (
             <NotificationTab
@@ -612,6 +505,146 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user }) =>
           )}
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditProfileOpen && (
+        <div className="fixed inset-0 bg-[#0b1c30]/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-6 transition-all duration-300">
+          <div className="bg-surface-lowest rounded-lg shadow-2xl border border-outline-variant w-full max-w-lg animate-scale-up overflow-hidden">
+            <div className="px-6 py-4.5 border-b border-outline-variant flex items-center justify-between bg-surface-low">
+              <h2 className="text-sm font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary">edit</span> Edit Profile
+              </h2>
+              <button 
+                className="w-[32px] h-[32px] flex items-center justify-center rounded-full hover:bg-surface-low text-on-surface-variant transition-colors" 
+                onClick={() => setIsEditProfileOpen(false)}
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <div className="p-6 flex flex-col gap-4">
+              {/* Photo Editor */}
+              <div className="flex flex-col items-center gap-4 mb-2">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-outline-variant shadow-sm flex-shrink-0 bg-surface-variant flex items-center justify-center text-on-surface-variant font-bold text-3xl">
+                  {editProfileData.photoPreview ? (
+                    <img src={editProfileData.photoPreview} alt="Profile Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(user?.worker?.name || user?.username || 'User')
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn btn-outline border-primary/20 hover:bg-primary/5 text-primary text-[10px] font-bold py-1.5 px-3 rounded-sm flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined icon-xs">upload</span> Change
+                  </button>
+                  <button 
+                    onClick={() => setEditProfileData(prev => ({...prev, photoPreview: null, photoChanged: true}))}
+                    className="btn btn-outline border-error/20 hover:bg-error/5 text-error text-[10px] font-bold py-1.5 px-3 rounded-sm flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined icon-xs">delete</span> Remove
+                  </button>
+                </div>
+              </div>
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={fileInputRef} 
+                onChange={handlePhotoUpload} 
+                className="hidden" 
+              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Supervisor Name</label>
+                <input
+                  type="text"
+                  value={editProfileData.name}
+                  onChange={(e) => setEditProfileData({...editProfileData, name: e.target.value})}
+                  className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Email Address</label>
+                <input
+                  type="email"
+                  value={editProfileData.email}
+                  onChange={(e) => setEditProfileData({...editProfileData, email: e.target.value})}
+                  className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Mobile Number</label>
+                <input
+                  type="text"
+                  value={editProfileData.phone}
+                  onChange={(e) => setEditProfileData({...editProfileData, phone: e.target.value})}
+                  className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Mailing Address</label>
+                <textarea
+                  value={editProfileData.address}
+                  onChange={(e) => setEditProfileData({...editProfileData, address: e.target.value})}
+                  rows="2"
+                  className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 resize-none"
+                ></textarea>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-outline-variant bg-surface-lowest flex justify-end gap-2.5">
+              <button 
+                className="btn btn-ghost text-xs px-4 py-2 font-semibold border border-outline-variant rounded-sm hover:bg-surface-low" 
+                onClick={() => setIsEditProfileOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary bg-primary text-white text-xs font-bold px-5 py-2.5 rounded-sm hover:bg-primary-container flex items-center gap-1.5 shadow"
+                onClick={() => {
+                  const { photoPreview, photoChanged, ...profileData } = editProfileData;
+                  setProfile(profileData);
+                  saveSettings('profile', profileData);
+                  if (photoChanged) {
+                    updatePhoto(photoPreview);
+                    if (!photoPreview) {
+                      showToast('Profile photo removed', 'success');
+                    } else {
+                      showToast('Profile photo updated', 'success');
+                    }
+                  }
+                  setIsEditProfileOpen(false);
+                }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo View Modal */}
+      {isPhotoModalOpen && (
+        <div className="fixed inset-0 bg-[#0b1c30]/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-6 transition-all duration-300" onClick={() => setIsPhotoModalOpen(false)}>
+          <div className="bg-surface-lowest rounded-lg shadow-2xl border border-outline-variant w-full max-w-sm animate-scale-up overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4.5 border-b border-outline-variant flex items-center justify-between bg-surface-low">
+              <h2 className="text-sm font-bold text-on-surface uppercase tracking-wider">Profile Photo</h2>
+              <button 
+                className="w-[32px] h-[32px] flex items-center justify-center rounded-full hover:bg-surface-low text-on-surface-variant transition-colors" 
+                onClick={() => setIsPhotoModalOpen(false)}
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <div className="p-6 flex flex-col items-center gap-6 bg-surface">
+              <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-outline-variant shadow-lg flex-shrink-0">
+                <UserAvatar 
+                  user={user} 
+                  className="w-full h-full object-cover text-5xl"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
