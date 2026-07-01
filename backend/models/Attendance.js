@@ -14,6 +14,30 @@ const AttendanceSchema = new mongoose.Schema({
     type: String,
     enum: ['Present', 'Absent', 'Leave'],
     default: 'Present'
+  },
+  checkInTime: {
+    type: String,
+    default: '-'
+  },
+  checkOutTime: {
+    type: String,
+    default: '-'
+  },
+  workingHours: {
+    type: Number,
+    default: 0
+  },
+  shift: {
+    type: String,
+    default: 'General'
+  },
+  supervisorName: {
+    type: String,
+    default: 'Supervisor'
+  },
+  remarks: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true
