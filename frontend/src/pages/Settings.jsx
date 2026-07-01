@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
+import UserAvatar from '../components/UserAvatar';
+import { useProfilePhoto } from '../hooks/useProfilePhoto';
 
 // ─── NotificationTab sub-component ────────────────────────────────────────────
 // Extracted from IIFE pattern to prevent component re-mounting on every parent render
@@ -212,7 +214,7 @@ const NotificationTab = ({ notifications, showToast, onRefreshNotifications }) =
 // ──────────────────────────────────────────────────────────────────────────────
 
 
-const Settings = ({ showToast, notifications, onRefreshNotifications }) => {
+const Settings = ({ showToast, notifications, onRefreshNotifications, user }) => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
     if (location.state && location.state.tab) {
@@ -253,6 +255,20 @@ const Settings = ({ showToast, notifications, onRefreshNotifications }) => {
       lutEnabled: false
     };
   });
+
+  const fileInputRef = useRef(null);
+  const { updatePhoto } = useProfilePhoto(user?.id);
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        updatePhoto(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
 
   const handleProfileChange = (e) => {
@@ -401,7 +417,32 @@ const Settings = ({ showToast, notifications, onRefreshNotifications }) => {
                   ></textarea>
                 </div>
 
-                <div className="pt-2 border-t border-outline-variant/30 flex justify-end">
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Profile Photo</label>
+                  <div 
+                    className="relative w-24 h-24 rounded-full overflow-hidden border border-outline-variant group cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <UserAvatar 
+                      user={user} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="material-symbols-outlined text-white text-[20px]">add_a_photo</span>
+                      <span className="text-[9px] font-bold text-white uppercase mt-1">Change</span>
+                    </div>
+                  </div>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    ref={fileInputRef} 
+                    onChange={handlePhotoUpload} 
+                    className="hidden" 
+                  />
+                  <span className="text-[10px] text-outline mt-1">Click the image to update your profile photo.</span>
+                </div>
+
+                <div className="pt-2 border-t border-outline-variant/30 flex justify-end mt-2">
                   <button
                     onClick={() => saveSettings('profile', profile)}
                     className="btn btn-primary bg-primary text-white font-semibold rounded-sm px-4 py-2 hover:bg-primary-container transition-colors flex items-center gap-1.5 text-xs uppercase"
