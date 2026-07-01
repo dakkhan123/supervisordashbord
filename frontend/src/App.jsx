@@ -350,6 +350,7 @@ function AppContent() {
                           showToast={showToast} 
                           notifications={notifications}
                           onRefreshNotifications={fetchNotifications}
+                          user={user}
                         />
                       } 
                     />

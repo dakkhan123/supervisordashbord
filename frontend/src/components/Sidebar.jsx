@@ -1,24 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import UserAvatar from './UserAvatar';
-import { useProfilePhoto } from '../hooks/useProfilePhoto';
 
 const Sidebar = ({ mobileOpen, setMobileOpen, alertCount = 0, user, onLogout }) => {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const fileInputRef = useRef(null);
-  const { updatePhoto } = useProfilePhoto(user?.id);
-
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        updatePhoto(event.target.result);
-        setProfileMenuOpen(false);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
   return (
     <>
       {/* Mobile Drawer Overlay */}
@@ -163,13 +148,6 @@ const Sidebar = ({ mobileOpen, setMobileOpen, alertCount = 0, user, onLogout }) 
           {profileMenuOpen && (
             <div className="absolute bottom-full left-3 right-3 mb-2 bg-[#213145] border border-white/8 rounded-lg p-1 shadow-lg animate-scale-up z-[110]">
               <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-primary-fixed hover:bg-white/8 rounded transition-colors text-left"
-              >
-                <span className="material-symbols-outlined icon-xs">add_a_photo</span>
-                Change Photo
-              </button>
-              <button 
                 onClick={() => {
                   setProfileMenuOpen(false);
                   if (onLogout) onLogout();
@@ -179,13 +157,6 @@ const Sidebar = ({ mobileOpen, setMobileOpen, alertCount = 0, user, onLogout }) 
                 <span className="material-symbols-outlined icon-xs">logout</span>
                 Sign Out
               </button>
-              <input 
-                type="file" 
-                accept="image/*" 
-                ref={fileInputRef} 
-                onChange={handlePhotoUpload} 
-                className="hidden" 
-              />
             </div>
           )}
           <div 
