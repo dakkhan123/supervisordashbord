@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationDrawer';
 import UserAvatar from './UserAvatar';
 
 const TopNav = ({ title, breadcrumb, searchVal, setSearchVal, setMobileOpen, showToast, notifications, onBellClick, user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter' && searchVal?.trim()) {
@@ -50,16 +51,12 @@ const TopNav = ({ title, breadcrumb, searchVal, setSearchVal, setMobileOpen, sho
           onClick={onBellClick}
         />
 
-        <button 
-          className="w-[38px] h-[38px] flex items-center justify-center rounded-full hover:bg-surface-low text-on-surface-variant transition-colors duration-150"
-          onClick={() => navigate('/settings')}
+        <div 
+          className={`flex items-center gap-2.5 ${location.pathname === '/settings' ? 'cursor-default' : 'cursor-pointer'}`} 
+          onClick={() => {
+            if (location.pathname !== '/settings') navigate('/settings');
+          }}
         >
-          <span className="material-symbols-outlined">settings_suggest</span>
-        </button>
-
-        <div className="w-[1px] h-6 bg-outline-variant opacity-40 mx-1"></div>
-
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/settings')}>
           <div className="text-right hidden sm:block">
             <p className="text-xs font-semibold text-on-surface leading-tight">{user?.worker?.name || user?.username || 'User'}</p>
             <span className="text-[10px] text-outline uppercase tracking-wider">{user?.role === 'Worker' ? 'Staff' : 'Unit Pune-A12'}</span>

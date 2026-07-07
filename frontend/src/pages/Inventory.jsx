@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { DeleteConfirmModal } from '../components/Modals';
 
-const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderClick, refreshTrigger, triggerRefresh }) => {
+const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderClick, refreshTrigger, triggerRefresh, user }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
@@ -184,7 +184,7 @@ const Inventory = ({ searchVal, showToast, onAddClick, onEditClick, onReorderCli
           api.reorderItem({
             sku: item.sku,
             qty: Math.max((item.threshold - item.qty) * 2, 100),
-            op: 'Rajesh Kumar',
+            op: user?.worker?.name || user?.username || 'User',
             supplier: item.supplier
           })
         )

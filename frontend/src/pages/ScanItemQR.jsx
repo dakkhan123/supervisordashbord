@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { api } from '../services/api';
 import PrintableLabel from '../components/PrintableLabel';
 
-const ScanItemQR = ({ showToast, triggerRefresh, onReorderClick }) => {
+const ScanItemQR = ({ showToast, triggerRefresh, onReorderClick, user }) => {
   const [scannerActive, setScannerActive] = useState(true);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [cameraError, setCameraError] = useState(null);
@@ -208,7 +208,7 @@ const ScanItemQR = ({ showToast, triggerRefresh, onReorderClick }) => {
 
       const res = await api.updateItem(scannedItem._id, {
         qty: newQty,
-        op: 'Rajesh Kumar'
+        op: user?.worker?.name || user?.username || 'User'
       });
 
       if (res.success) {
