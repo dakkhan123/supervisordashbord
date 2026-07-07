@@ -352,6 +352,11 @@ export const api = {
     return res.json();
   },
 
+  calculateSalary: async (workerId, month) => {
+    const res = await authFetch(`${API_URL}/salary/calculate?worker=${workerId}&month=${month}`);
+    return res.json();
+  },
+
   createSalary: async (salaryData) => {
     const res = await authFetch(`${API_URL}/salary`, {
       method: 'POST',
