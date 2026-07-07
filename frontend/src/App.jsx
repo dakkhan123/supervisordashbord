@@ -299,6 +299,7 @@ function AppContent() {
                           onReorderClick={openReorderModal}
                           refreshTrigger={refreshTrigger}
                           triggerRefresh={triggerRefresh}
+                          user={user}
                         />
                       } 
                     />
@@ -310,6 +311,7 @@ function AppContent() {
                           refreshTrigger={refreshTrigger}
                           triggerRefresh={triggerRefresh}
                           onReorderClick={openReorderModal}
+                          user={user}
                         />
                       } 
                     />
@@ -353,6 +355,12 @@ function AppContent() {
                           showToast={showToast} 
                           notifications={notifications}
                           onRefreshNotifications={fetchNotifications}
+                          user={user}
+                          onLogout={() => {
+                            localStorage.removeItem('smartops_token');
+                            setUser(null);
+                            showToast('Logged out successfully', 'success');
+                          }}
                         />
                       } 
                     />
