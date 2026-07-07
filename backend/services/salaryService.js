@@ -1,4 +1,7 @@
 const Salary = require('../models/Salary');
+const Worker = require('../models/Worker');
+const Attendance = require('../models/Attendance');
+const Task = require('../models/Task');
 
 class SalaryService {
   async getAllSalaries(queryParams) {
@@ -45,6 +48,103 @@ class SalaryService {
     }
     return true;
   }
+
+  async calculateSalary(workerId, monthStr) {
+    if (!workerId || !monthStr) {
+      const error = new Error('Worker ID and Month are required');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const worker = await Worker.findById(workerId);
+    if (!worker) {
+      const error = new Error('Worker not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Parse monthStr (e.g. "June 2026" or "2026-06") to range
+    let start, end;
+    if (monthStr.match(/^\d{4}-\d{2}$/)) {
+      const [y, m] = monthStr.split('-');
+      const year = parseInt(y);
+      const monthIndex = parseInt(m) - 1;
+      start = new Date(year, monthIndex, 1);
+      end = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+    } else {
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const parts = monthStr.split(' ');
+      const monthName = parts[0];
+      const year = parseInt(parts[1]) || new Date().getFullYear();
+      let monthIndex = monthNames.findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+      if (monthIndex === -1) {
+        monthIndex = new Date().getMonth();
+      }
+      start = new Date(year, monthIndex, 1);
+      end = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+    }
+
+    // Fetch Attendance
+    const attendanceRecords = await Attendance.find({
+      worker: workerId,
+      date: { $gte: start, $lte: end }
+    });
+
+    let presentDays = 0;
+    let absentDays = 0;
+    let leaveDays = 0;
+
+    attendanceRecords.forEach(record => {
+      if (record.status === 'Present') presentDays++;
+      else if (record.status === 'Absent') absentDays++;
+      else if (record.status === 'Leave') leaveDays++;
+    });
+
+    // Fetch Completed Tasks in this month range
+    const completedTasks = await Task.find({
+      assignedTo: workerId,
+      status: 'Completed',
+      updatedAt: { $gte: start, $lte: end }
+    });
+    const tasksCount = completedTasks.length;
+
+    // Default calculations
+    const baseSalary = worker.salary || 0;
+    const tasksCompleted = tasksCount;
+    const tasksIncentive = tasksCompleted * 500; // default ₹500 per completed task
+    const overtimeHours = 0;
+    const overtimeRate = 150; // default ₹150/hour
+    const deductions = Math.round((baseSalary / 22) * absentDays); // default deduction for absent days
+    const advances = 0;
+    const amount = Math.max(0, baseSalary + tasksIncentive + (overtimeHours * overtimeRate) - deductions - advances);
+
+    return {
+      worker: {
+        _id: worker._id,
+        name: worker.name,
+        role: worker.role,
+        salary: worker.salary
+      },
+      month: monthStr,
+      attendance: {
+        present: presentDays,
+        absent: absentDays,
+        leave: leaveDays,
+        totalLogged: attendanceRecords.length
+      },
+      calculations: {
+        baseSalary,
+        tasksCompleted,
+        tasksIncentive,
+        overtimeHours,
+        overtimeRate,
+        deductions,
+        advances,
+        amount
+      }
+    };
+  }
 }
 
 module.exports = new SalaryService();
+
