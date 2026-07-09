@@ -9,6 +9,7 @@ const Register = ({ showToast }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('Supervisor');
+  const [dateOfJoining, setDateOfJoining] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -31,7 +32,8 @@ const Register = ({ showToast }) => {
         password,
         name,
         phone,
-        role
+        role,
+        dateOfJoining
       });
 
       if (res.success) {
@@ -166,6 +168,21 @@ const Register = ({ showToast }) => {
                   <option value="Supervisor">Supervisor (Full Console Rights)</option>
                   <option value="Worker">Worker (Limited Rights)</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Date of Joining</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">calendar_month</span>
+                <input
+                  type="date"
+                  value={dateOfJoining}
+                  onChange={(e) => setDateOfJoining(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                  disabled={loading}
+                  required
+                />
               </div>
             </div>
 

@@ -4,12 +4,9 @@ const workerController = require('../controllers/workerController');
 
 const attendanceRouter = express.Router();
 attendanceRouter.route('/')
-  .get(attendanceController.getAllAttendance)
-  .post(attendanceController.logAttendance);
+  .get(attendanceController.getAllAttendance);
 attendanceRouter.route('/:id')
-  .get(attendanceController.getAttendanceById)
-  .put(attendanceController.updateAttendance)
-  .delete(attendanceController.deleteAttendance);
+  .get(attendanceController.getAttendanceById);
 
 const workersRouter = express.Router();
 workersRouter.route('/')
