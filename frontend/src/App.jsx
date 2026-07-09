@@ -17,6 +17,7 @@ import Register from './pages/Register';
 import Tasks from './pages/Tasks';
 import Attendance from './pages/Attendance';
 import WorkerOverview from './pages/WorkerOverview';
+import Salary from './pages/Salary';
 import ProtectedRoute from './components/ProtectedRoute';
 import { api } from './services/api';
 import { io as socketIO } from 'socket.io-client';
@@ -222,6 +223,8 @@ function AppContent() {
         return { title: 'Attendance Registry', breadcrumb: 'Console / Attendance' };
       case '/workers':
         return { title: 'Staff Directory & Profile', breadcrumb: 'Console / Staff' };
+      case '/salary':
+        return { title: 'Salary & Payroll Management', breadcrumb: 'Console / Salary' };
       default:
         return { title: 'SmartOps', breadcrumb: 'Console' };
     }
@@ -382,6 +385,14 @@ function AppContent() {
                       element={
                         <WorkerOverview 
                           searchVal={searchVal}
+                          showToast={showToast} 
+                        />
+                      } 
+                    />
+                    <Route 
+                      path="/salary" 
+                      element={
+                        <Salary 
                           showToast={showToast} 
                         />
                       } 

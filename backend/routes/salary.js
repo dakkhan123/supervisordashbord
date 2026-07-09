@@ -6,6 +6,9 @@ router.route('/')
   .get(salaryController.getAllSalaries)
   .post(salaryController.createSalary);
 
+router.route('/calculate')
+  .get(salaryController.calculateSalary);
+
 router.route('/:id')
   .get(salaryController.getSalaryById)
   .put(salaryController.updateSalary)

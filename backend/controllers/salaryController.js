@@ -10,6 +10,16 @@ class SalaryController {
     }
   }
 
+  async calculateSalary(req, res, next) {
+    try {
+      const { worker, month } = req.query;
+      const calc = await salaryService.calculateSalary(worker, month);
+      res.status(200).json({ success: true, data: calc });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async createSalary(req, res, next) {
     try {
       const log = await salaryService.createSalary(req.body);
