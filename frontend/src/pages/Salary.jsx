@@ -42,6 +42,11 @@ const Salary = ({ showToast }) => {
     notes: ''
   });
 
+  // Manual Deduction Calculator State
+  const [showDeductionCalc, setShowDeductionCalc] = useState(false);
+  const [manualDeductRate, setManualDeductRate] = useState(100);
+  const [manualDeductDays, setManualDeductDays] = useState(0);
+
   // History Filter state
   const [filterWorker, setFilterWorker] = useState('');
   const [filterMonth, setFilterMonth] = useState('All');
@@ -112,11 +117,13 @@ const Salary = ({ showToast }) => {
           tasksIncentive: calculations.tasksIncentive,
           overtimeHours: calculations.overtimeHours,
           overtimeRate: calculations.overtimeRate,
-          deductions: attendance.absent,
+          deductions: calculations.deductions,
           advances: calculations.advances,
           status: 'Pending',
           notes: `Payroll for ${selectedMonth}`
         });
+        setManualDeductDays(attendance.absent);
+        setManualDeductRate(100);
       } else {
         showToast(res.error || 'Failed to compute automatic salary', 'error');
       }
@@ -135,8 +142,7 @@ const Salary = ({ showToast }) => {
   // Compute live amount based on editable fields
   const getLiveNetSalary = () => {
     const { baseSalary, tasksIncentive, overtimeHours, overtimeRate, deductions, advances } = formFields;
-    const deductionAmount = Math.round((Number(baseSalary) / 22) * Number(deductions));
-    const net = Number(baseSalary) + Number(tasksIncentive) + (Number(overtimeHours) * Number(overtimeRate)) - deductionAmount - Number(advances);
+    const net = Number(baseSalary) + Number(tasksIncentive) + (Number(overtimeHours) * Number(overtimeRate)) - Number(deductions) - Number(advances);
     return Math.max(0, Math.round(net));
   };
 
@@ -263,7 +269,7 @@ const Salary = ({ showToast }) => {
         totalPending += s.amount || 0;
       }
       totalIncentives += (s.tasksIncentive || 0) + ((s.overtimeHours || 0) * (s.overtimeRate || 0));
-      const deductionAmt = Math.round(((s.baseSalary || 0) / 22) * (s.deductions || 0));
+      const deductionAmt = s.deductions || 0;
       totalDeductions += deductionAmt + (s.advances || 0);
     });
 
@@ -508,16 +514,68 @@ const Salary = ({ showToast }) => {
                     <h4 className="text-xs font-black text-error uppercase tracking-wider border-b border-outline-variant pb-1.5">Deductions & Advances</h4>
 
                     <div>
-                      <label className="text-[10px] font-bold text-outline uppercase block mb-1">Absence Deductions (Days)</label>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] font-bold text-outline uppercase block">Absence Deductions (INR)</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowDeductionCalc(prev => !prev)}
+                          className="text-[10px] text-primary hover:text-primary-container font-extrabold uppercase flex items-center gap-0.5 hover:cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">calculate</span>
+                          {showDeductionCalc ? 'Close Calculator' : 'Manual Calculator'}
+                        </button>
+                      </div>
                       <input
                         type="number"
                         min="0"
-                        step="0.5"
                         value={formFields.deductions}
                         onChange={(e) => setFormFields(prev => ({ ...prev, deductions: Number(e.target.value) }))}
                         className="w-full px-3 py-2 border border-outline-variant rounded-sm bg-surface-lowest outline-none text-on-surface font-mono text-sm focus:border-primary"
                       />
                     </div>
+
+                    {showDeductionCalc && (
+                      <div className="bg-surface-low border border-outline-variant p-4 rounded-sm flex flex-col gap-3">
+                        <h5 className="text-[10px] font-bold text-on-surface uppercase tracking-wider border-b border-outline-variant pb-1">Deduction Manual Calculator</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[9px] font-bold text-outline uppercase block mb-0.5">Rate / Day (INR)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={manualDeductRate}
+                              onChange={(e) => setManualDeductRate(Number(e.target.value))}
+                              className="w-full px-2 py-1 border border-outline-variant rounded-sm bg-surface-lowest outline-none text-xs text-on-surface font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-bold text-outline uppercase block mb-0.5">Days Absent</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={manualDeductDays}
+                              onChange={(e) => setManualDeductDays(Number(e.target.value))}
+                              className="w-full px-2 py-1 border border-outline-variant rounded-sm bg-surface-lowest outline-none text-xs text-on-surface font-mono"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center text-xs pt-1">
+                          <span className="text-outline">Total:</span>
+                          <span className="font-mono font-black text-error">-{formatINR(manualDeductRate * manualDeductDays)}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormFields(prev => ({ ...prev, deductions: manualDeductRate * manualDeductDays }));
+                            setShowDeductionCalc(false);
+                          }}
+                          className="w-full bg-error text-white hover:bg-error-container text-[10px] font-semibold uppercase py-1.5 rounded-sm hover:cursor-pointer transition-colors text-center"
+                        >
+                          Apply to Payout
+                        </button>
+                      </div>
+                    )}
 
                     <div>
                       <label className="text-[10px] font-bold text-outline uppercase block mb-1">Advances Issued (INR)</label>
@@ -561,7 +619,7 @@ const Salary = ({ showToast }) => {
                   <div>
                     <h4 className="text-xs font-black text-on-surface uppercase tracking-wide">Net Salary Payable (Live Update)</h4>
                     <p className="text-[10px] text-outline font-bold uppercase tracking-wider mt-1">
-                      Formula: Base ({formFields.baseSalary}) + Task Incentive ({formFields.tasksIncentive}) + Overtime ({formFields.overtimeHours * formFields.overtimeRate}) - Deductions ({Math.round((formFields.baseSalary / 22) * formFields.deductions)} for {formFields.deductions} days) - Advances ({formFields.advances})
+                      Formula: Base ({formFields.baseSalary}) + Task Incentive ({formFields.tasksIncentive}) + Overtime ({formFields.overtimeHours * formFields.overtimeRate}) - Deductions ({formFields.deductions}) - Advances ({formFields.advances})
                     </p>
                   </div>
                   <div className="text-right">
@@ -676,7 +734,7 @@ const Salary = ({ showToast }) => {
                             OT: <span className="font-bold text-primary">+{formatINR((s.overtimeHours || 0) * (s.overtimeRate || 0))}</span>
                           </div>
                           <div className="font-mono text-[10.5px] text-outline mt-0.5">
-                            Deductions: <span className="font-bold text-error">-{formatINR(Math.round(((s.baseSalary || 0) / 22) * (s.deductions || 0)))} ({s.deductions || 0} days)</span> · 
+                            Deductions: <span className="font-bold text-error">-{formatINR(s.deductions || 0)}</span> · 
                             Advances: <span className="font-bold text-error">-{formatINR(s.advances || 0)}</span>
                           </div>
                         </td>
@@ -917,8 +975,8 @@ const Salary = ({ showToast }) => {
                   <h4 className="text-[10px] font-bold text-outline uppercase tracking-wider border-b border-outline-variant pb-1">Deductions & Advances</h4>
                   {selectedPayslip.deductions > 0 && (
                     <div className="flex justify-between text-xs py-1">
-                      <span className="text-outline">Absence Payout Penalties ({selectedPayslip.deductions} days)</span>
-                      <span className="font-mono text-error font-bold">-{formatINR(Math.round(((selectedPayslip.baseSalary || 0) / 22) * (selectedPayslip.deductions || 0)))}</span>
+                      <span className="text-outline">Absence Payout Penalties</span>
+                      <span className="font-mono text-error font-bold">-{formatINR(selectedPayslip.deductions || 0)}</span>
                     </div>
                   )}
                   {selectedPayslip.advances > 0 && (
