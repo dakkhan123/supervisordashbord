@@ -105,14 +105,14 @@ const Salary = ({ showToast }) => {
       const res = await api.calculateSalary(selectedWorkerId, selectedMonth);
       if (res.success && res.data) {
         setCalcData(res.data);
-        const { calculations } = res.data;
+        const { calculations, attendance } = res.data;
         setFormFields({
           baseSalary: calculations.baseSalary,
           tasksCompleted: calculations.tasksCompleted,
           tasksIncentive: calculations.tasksIncentive,
           overtimeHours: calculations.overtimeHours,
           overtimeRate: calculations.overtimeRate,
-          deductions: calculations.deductions,
+          deductions: attendance.absent,
           advances: calculations.advances,
           status: 'Pending',
           notes: `Payroll for ${selectedMonth}`
@@ -135,7 +135,8 @@ const Salary = ({ showToast }) => {
   // Compute live amount based on editable fields
   const getLiveNetSalary = () => {
     const { baseSalary, tasksIncentive, overtimeHours, overtimeRate, deductions, advances } = formFields;
-    const net = Number(baseSalary) + Number(tasksIncentive) + (Number(overtimeHours) * Number(overtimeRate)) - Number(deductions) - Number(advances);
+    const deductionAmount = Math.round((Number(baseSalary) / 22) * Number(deductions));
+    const net = Number(baseSalary) + Number(tasksIncentive) + (Number(overtimeHours) * Number(overtimeRate)) - deductionAmount - Number(advances);
     return Math.max(0, Math.round(net));
   };
 
@@ -214,6 +215,31 @@ const Salary = ({ showToast }) => {
     }
   };
 
+  // Download Payslip as PDF using html2pdf
+  const handleDownloadPDF = () => {
+    if (!selectedPayslip) return;
+    const element = document.getElementById('printable-payslip');
+    const opt = {
+      margin:       10,
+      filename:     `payslip-${selectedPayslip.worker?.name || 'worker'}-${selectedPayslip.month}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // Load html2pdf dynamically from CDN if it is not already present on window object
+    if (window.html2pdf) {
+      window.html2pdf().set(opt).from(element).save();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      script.onload = () => {
+        window.html2pdf().set(opt).from(element).save();
+      };
+      document.body.appendChild(script);
+    }
+  };
+
   // Filter salaries list
   const filteredSalaries = salaries.filter(s => {
     const matchesWorker = !filterWorker || (s.worker?.name && s.worker.name.toLowerCase().includes(filterWorker.toLowerCase()));
@@ -237,7 +263,8 @@ const Salary = ({ showToast }) => {
         totalPending += s.amount || 0;
       }
       totalIncentives += (s.tasksIncentive || 0) + ((s.overtimeHours || 0) * (s.overtimeRate || 0));
-      totalDeductions += (s.deductions || 0) + (s.advances || 0);
+      const deductionAmt = Math.round(((s.baseSalary || 0) / 22) * (s.deductions || 0));
+      totalDeductions += deductionAmt + (s.advances || 0);
     });
 
     // Payout by month data structure
@@ -282,10 +309,7 @@ const Salary = ({ showToast }) => {
       {/* Title Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-on-surface">Salary & Payroll Hub</h1>
-          <p className="text-xs text-outline mt-1 max-w-[600px]">
-            The Salary & Payroll Module automates salary calculations using attendance records, completed tasks, overtime hours, deductions, and incentives. This module ensures transparent and accurate payroll processing for all employees.
-          </p>
+          <h1 className="text-xl font-black text-on-surface">Salary & Payroll</h1>
         </div>
       </div>
 
@@ -437,7 +461,7 @@ const Salary = ({ showToast }) => {
                             setFormFields(prev => ({ 
                               ...prev, 
                               tasksCompleted: val, 
-                              tasksIncentive: val * 500 // auto-update incentive amount
+                              tasksIncentive: val * 100 // auto-update incentive amount
                             }));
                           }}
                           className="w-full px-3 py-2 border border-outline-variant rounded-sm bg-surface-lowest outline-none text-on-surface font-mono text-sm focus:border-primary"
@@ -484,10 +508,11 @@ const Salary = ({ showToast }) => {
                     <h4 className="text-xs font-black text-error uppercase tracking-wider border-b border-outline-variant pb-1.5">Deductions & Advances</h4>
 
                     <div>
-                      <label className="text-[10px] font-bold text-outline uppercase block mb-1">Absence Payout Deductions (INR)</label>
+                      <label className="text-[10px] font-bold text-outline uppercase block mb-1">Absence Deductions (Days)</label>
                       <input
                         type="number"
                         min="0"
+                        step="0.5"
                         value={formFields.deductions}
                         onChange={(e) => setFormFields(prev => ({ ...prev, deductions: Number(e.target.value) }))}
                         className="w-full px-3 py-2 border border-outline-variant rounded-sm bg-surface-lowest outline-none text-on-surface font-mono text-sm focus:border-primary"
@@ -536,7 +561,7 @@ const Salary = ({ showToast }) => {
                   <div>
                     <h4 className="text-xs font-black text-on-surface uppercase tracking-wide">Net Salary Payable (Live Update)</h4>
                     <p className="text-[10px] text-outline font-bold uppercase tracking-wider mt-1">
-                      Formula: Base ({formFields.baseSalary}) + Task Incentive ({formFields.tasksIncentive}) + Overtime ({formFields.overtimeHours * formFields.overtimeRate}) - Deductions ({formFields.deductions}) - Advances ({formFields.advances})
+                      Formula: Base ({formFields.baseSalary}) + Task Incentive ({formFields.tasksIncentive}) + Overtime ({formFields.overtimeHours * formFields.overtimeRate}) - Deductions ({Math.round((formFields.baseSalary / 22) * formFields.deductions)} for {formFields.deductions} days) - Advances ({formFields.advances})
                     </p>
                   </div>
                   <div className="text-right">
@@ -651,7 +676,7 @@ const Salary = ({ showToast }) => {
                             OT: <span className="font-bold text-primary">+{formatINR((s.overtimeHours || 0) * (s.overtimeRate || 0))}</span>
                           </div>
                           <div className="font-mono text-[10.5px] text-outline mt-0.5">
-                            Deductions: <span className="font-bold text-error">-{formatINR(s.deductions || 0)}</span> · 
+                            Deductions: <span className="font-bold text-error">-{formatINR(Math.round(((s.baseSalary || 0) / 22) * (s.deductions || 0)))} ({s.deductions || 0} days)</span> · 
                             Advances: <span className="font-bold text-error">-{formatINR(s.advances || 0)}</span>
                           </div>
                         </td>
@@ -892,8 +917,8 @@ const Salary = ({ showToast }) => {
                   <h4 className="text-[10px] font-bold text-outline uppercase tracking-wider border-b border-outline-variant pb-1">Deductions & Advances</h4>
                   {selectedPayslip.deductions > 0 && (
                     <div className="flex justify-between text-xs py-1">
-                      <span className="text-outline">Absence Payout Penalties</span>
-                      <span className="font-mono text-error font-bold">-{formatINR(selectedPayslip.deductions)}</span>
+                      <span className="text-outline">Absence Payout Penalties ({selectedPayslip.deductions} days)</span>
+                      <span className="font-mono text-error font-bold">-{formatINR(Math.round(((selectedPayslip.baseSalary || 0) / 22) * (selectedPayslip.deductions || 0)))}</span>
                     </div>
                   )}
                   {selectedPayslip.advances > 0 && (
@@ -939,6 +964,12 @@ const Salary = ({ showToast }) => {
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-outline-variant">
+              <button
+                onClick={handleDownloadPDF}
+                className="btn btn-outline border border-primary/20 text-primary hover:bg-primary/5 px-4 py-2 rounded-sm font-semibold text-xs flex items-center gap-1.5 hover:cursor-pointer"
+              >
+                <span className="material-symbols-outlined icon-sm">download</span>Download PDF
+              </button>
               <button
                 onClick={() => {
                   const content = document.getElementById('printable-payslip').innerHTML;
