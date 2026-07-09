@@ -246,6 +246,103 @@ const Salary = ({ showToast }) => {
     }
   };
 
+  // Download entire filtered Salary registry as a landscape PDF report
+  const handleDownloadRegistryPDF = () => {
+    if (filteredSalaries.length === 0) return;
+
+    // Create container
+    const reportElement = document.createElement('div');
+    reportElement.style.padding = '20px';
+    reportElement.style.fontFamily = 'sans-serif';
+    reportElement.style.backgroundColor = 'white';
+    reportElement.style.color = 'black';
+
+    // Title and metadata header
+    let reportHtml = `
+      <div style="margin-bottom: 20px; border-bottom: 2px solid #006a6a; padding-bottom: 10px;">
+        <h1 style="color: #006a6a; margin: 0; font-size: 20px; font-weight: bold;">SmartOps Payroll Registry Report</h1>
+        <p style="margin: 5px 0 0 0; font-size: 11px; color: #555;">
+          Generated on: ${new Date().toLocaleString()} &middot; Month: ${filterMonth} &middot; Status: ${filterStatus}
+        </p>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 10px; text-align: left;">
+        <thead>
+          <tr style="background-color: #f2f2f2; border-bottom: 1px solid #ddd; font-weight: bold; color: #555;">
+            <th style="padding: 8px;">Worker / Role</th>
+            <th style="padding: 8px;">Month</th>
+            <th style="padding: 8px;">Base Salary</th>
+            <th style="padding: 8px;">Incentives</th>
+            <th style="padding: 8px;">OT Pay</th>
+            <th style="padding: 8px;">Deductions</th>
+            <th style="padding: 8px;">Advances</th>
+            <th style="padding: 8px; text-align: right;">Net Payout</th>
+            <th style="padding: 8px; text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    filteredSalaries.forEach(s => {
+      const incentiveAmt = s.tasksIncentive || 0;
+      const otAmt = (s.overtimeHours || 0) * (s.overtimeRate || 0);
+      reportHtml += `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 8px; font-weight: bold;">
+            ${s.worker?.name || 'Deleted Worker'}<br/>
+            <span style="font-size: 8px; color: #777; font-weight: normal; text-transform: uppercase;">${s.worker?.role || 'Staff'}</span>
+          </td>
+          <td style="padding: 8px; font-family: monospace;">${s.month}</td>
+          <td style="padding: 8px; font-family: monospace;">${formatINR(s.baseSalary || 0)}</td>
+          <td style="padding: 8px; font-family: monospace; color: #006a6a;">+${formatINR(incentiveAmt)}</td>
+          <td style="padding: 8px; font-family: monospace; color: #006a6a;">+${formatINR(otAmt)}</td>
+          <td style="padding: 8px; font-family: monospace; color: #c00;">-${formatINR(s.deductions || 0)}</td>
+          <td style="padding: 8px; font-family: monospace; color: #c00;">-${formatINR(s.advances || 0)}</td>
+          <td style="padding: 8px; font-family: monospace; font-weight: bold; text-align: right; color: #006a6a;">${formatINR(s.amount)}</td>
+          <td style="padding: 8px; text-align: center;">
+            <span style="font-size: 8px; font-weight: bold; padding: 2px 6px; border-radius: 9999px; border: 1px solid ${s.status === 'Paid' ? '#006a6a' : '#e29314'}; color: ${s.status === 'Paid' ? '#006a6a' : '#e29314'};">
+              ${s.status}
+            </span>
+          </td>
+        </tr>
+      `;
+    });
+
+    // Totals row
+    const totalPayout = filteredSalaries.reduce((acc, s) => acc + (s.amount || 0), 0);
+    reportHtml += `
+        </tbody>
+        <tfoot>
+          <tr style="background-color: #f9f9f9; font-weight: bold; border-top: 2px solid #006a6a;">
+            <td colspan="7" style="padding: 10px; text-align: right;">Total Expenditures:</td>
+            <td style="padding: 10px; font-family: monospace; text-align: right; color: #006a6a; font-size: 11px;">${formatINR(totalPayout)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+
+    reportElement.innerHTML = reportHtml;
+
+    const opt = {
+      margin:       10,
+      filename:     `payroll-report-${filterMonth}-${filterStatus}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+
+    if (window.html2pdf) {
+      window.html2pdf().set(opt).from(reportElement).save();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      script.onload = () => {
+        window.html2pdf().set(opt).from(reportElement).save();
+      };
+      document.body.appendChild(script);
+    }
+  };
+
   // Filter salaries list
   const filteredSalaries = salaries.filter(s => {
     const matchesWorker = !filterWorker || (s.worker?.name && s.worker.name.toLowerCase().includes(filterWorker.toLowerCase()));
@@ -689,6 +786,14 @@ const Salary = ({ showToast }) => {
                 </select>
               </div>
             </div>
+            {filteredSalaries.length > 0 && (
+              <button
+                onClick={handleDownloadRegistryPDF}
+                className="btn btn-outline border border-primary/20 text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-sm font-semibold text-xs flex items-center gap-1.5 hover:cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined icon-sm">download</span>Download Report PDF
+              </button>
+            )}
           </div>
 
           {/* Data Table */}
