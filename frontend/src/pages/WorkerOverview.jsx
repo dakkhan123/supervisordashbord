@@ -29,7 +29,8 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     phone: '',
     role: 'Worker',
     salary: 15000,
-    status: 'Active'
+    status: 'Active',
+    dateOfJoining: new Date().toISOString().split('T')[0]
   });
 
   const [taskForm, setTaskForm] = useState({
@@ -98,7 +99,8 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
       phone: '',
       role: 'Worker',
       salary: 15000,
-      status: 'Active'
+      status: 'Active',
+      dateOfJoining: new Date().toISOString().split('T')[0]
     });
     setWorkerModalOpen(true);
   };
@@ -110,7 +112,8 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
       phone: worker.phone || '',
       role: worker.role || 'Worker',
       salary: worker.salary || 15000,
-      status: worker.status || 'Active'
+      status: worker.status || 'Active',
+      dateOfJoining: worker.dateOfJoining ? new Date(worker.dateOfJoining).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
     });
     setWorkerModalOpen(true);
   };
@@ -455,6 +458,10 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                         <p className="flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-outline text-[16px]">payments</span>
                           Base salary: <strong className="text-on-surface">{canEditSalary && selectedWorker.salary !== undefined ? formatSalary(selectedWorker.salary) : '••••••'}</strong>
+                        </p>
+                        <p className="flex items-center gap-1.5 sm:col-span-2 mt-1">
+                          <span className="material-symbols-outlined text-outline text-[16px]">calendar_today</span>
+                          Joined: <strong className="text-on-surface">{formatDate(selectedWorker.dateOfJoining)}</strong>
                         </p>
                       </div>
                     </div>
@@ -831,6 +838,17 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Date of Joining</label>
+                  <input
+                    type="date"
+                    value={workerForm.dateOfJoining}
+                    onChange={(e) => setWorkerForm(prev => ({ ...prev, dateOfJoining: e.target.value }))}
+                    className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                    required
+                  />
                 </div>
               </div>
 

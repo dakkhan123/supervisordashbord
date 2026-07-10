@@ -6,7 +6,7 @@ const Worker = require('../models/Worker');
 class AuthController {
   async register(req, res, next) {
     try {
-      const { username, password, name, phone, role } = req.body;
+      const { username, password, name, phone, role, dateOfJoining } = req.body;
 
       if (!username || !password || !name) {
         return res.status(400).json({
@@ -32,7 +32,8 @@ class AuthController {
           phone: phone || '',
           role: role || 'Supervisor',
           salary: (role || 'Supervisor') === 'Supervisor' ? 28000 : 18000,
-          status: 'Active'
+          status: 'Active',
+          dateOfJoining: dateOfJoining || new Date()
         });
       }
 
@@ -117,7 +118,8 @@ class AuthController {
           name: username,
           role: user.role,
           salary: user.role === 'Supervisor' ? 28000 : 18000,
-          status: 'Active'
+          status: 'Active',
+          dateOfJoining: new Date()
         });
         user.worker = worker._id;
         await user.save();
