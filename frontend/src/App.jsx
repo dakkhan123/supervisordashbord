@@ -32,6 +32,36 @@ function AppContent() {
   const [alertCount, setAlertCount] = useState(0);
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
 
+  // Programmatic Warm friendly double chime synth using Web Audio API
+  const playNotificationSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      const playTone = (freq, startTime, duration) => {
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        
+        gainNode.gain.setValueAtTime(0.15, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+
+      const now = audioCtx.currentTime;
+      playTone(587.33, now, 0.12); // D5
+      playTone(880.00, now + 0.1, 0.25); // A5
+    } catch (error) {
+      console.error('AudioContext failed to initialize:', error);
+    }
+  };
+
   // Authentication states
   const [user, setUser] = useState(null);
   const [appLoading, setAppLoading] = useState(true);
@@ -111,8 +141,11 @@ function AppContent() {
   useEffect(() => {
     if (!user) return;
     const socket = socketIO({ path: '/socket.io', transports: ['websocket', 'polling'] });
-    socket.on('notification:new', () => {
+    socket.on('notification:new', (data) => {
       fetchNotifications();
+      if (data && data.notification) {
+        showToast(`${data.notification.title}: ${data.notification.message}`, 'info');
+      }
     });
     return () => socket.disconnect();
   }, [user]);
@@ -127,6 +160,7 @@ function AppContent() {
   const showToast = (msg, type = 'success') => {
     const id = Date.now() + Math.random().toString(36).substr(2, 9);
     setToasts((prev) => [...prev, { id, msg, type }]);
+    playNotificationSound();
   };
 
   const removeToast = (id) => {
