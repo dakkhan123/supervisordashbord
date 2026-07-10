@@ -149,7 +149,7 @@ async function runAudit() {
 
   // 5. Tasks (requires a worker profile)
   const taskWorker = await Worker.create({ name: 'Audit Task Worker', role: 'Worker', salary: 15000 });
-  const taskDoc = { title: 'Audit Test Task', description: 'Test', assignedTo: taskWorker._id, status: 'Pending' };
+  const taskDoc = { title: 'Audit Test Task', description: 'Test', assignedTo: taskWorker._id, assignedBy: taskWorker._id, status: 'Pending' };
   await testCRUD('Task', Task, taskDoc, 'status', 'In Progress');
   await Worker.findByIdAndDelete(taskWorker._id);
 

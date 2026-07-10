@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
 import { AddStockModal, ReorderModal } from './components/Modals';
@@ -386,15 +386,20 @@ function AppContent() {
                         <WorkerOverview 
                           searchVal={searchVal}
                           showToast={showToast} 
+                          user={user}
                         />
                       } 
                     />
                     <Route 
                       path="/salary" 
                       element={
-                        <Salary 
-                          showToast={showToast} 
-                        />
+                        user && (user.role.toLowerCase() === 'owner' || user.role.toLowerCase() === 'supervisor') ? (
+                          <Salary 
+                            showToast={showToast} 
+                          />
+                        ) : (
+                          <Navigate to="/" replace />
+                        )
                       } 
                     />
                   </Routes>

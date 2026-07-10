@@ -63,7 +63,7 @@ const Reports = ({ showToast, refreshTrigger }) => {
 
   useEffect(() => {
     fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo, filterType, refreshTrigger]);
 
   const handleExportPDF = () => {
@@ -122,7 +122,7 @@ const Reports = ({ showToast, refreshTrigger }) => {
     const monthsName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const inflowByMonth = Array(12).fill(0);
     const outflowByMonth = Array(12).fill(0);
-    
+
     let hasData = false;
     history.forEach(log => {
       const d = new Date(log.date);
@@ -219,7 +219,7 @@ const Reports = ({ showToast, refreshTrigger }) => {
       .sort((a, b) => b.moves - a.moves)
       .slice(0, 5)
       .map(mover => {
-        const pctChange = mover.inflow > 0 
+        const pctChange = mover.inflow > 0
           ? Math.round(((mover.outflow - mover.inflow) / mover.inflow) * 100)
           : 0;
         const changeStr = pctChange >= 0 ? `+${pctChange}%` : `${pctChange}%`;
@@ -287,16 +287,16 @@ const Reports = ({ showToast, refreshTrigger }) => {
           {/* Date Picker */}
           <div className="flex items-center gap-2.5 text-xs text-outline font-semibold">
             <span className="material-symbols-outlined icon-sm text-outline">date_range</span>
-            <input 
-              type="date" 
-              value={dateFrom} 
+            <input
+              type="date"
+              value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="px-2.5 py-1.5 border border-outline-variant rounded-sm bg-surface-lowest outline-none text-on-surface"
             />
             <span>to</span>
-            <input 
-              type="date" 
-              value={dateTo} 
+            <input
+              type="date"
+              value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="px-2.5 py-1.5 border border-outline-variant rounded-sm bg-surface-lowest outline-none text-on-surface"
             />
@@ -394,17 +394,17 @@ const Reports = ({ showToast, refreshTrigger }) => {
               {months.map((m, i) => (
                 <div key={m} className="flex-1 flex flex-col items-center justify-end h-full relative group">
                   <div className="w-full flex items-end gap-0.5 justify-center">
-                    <div 
+                    <div
                       className="w-2 md:w-3.5 bg-gradient-to-t from-primary/70 to-primary rounded-t-sm hover:brightness-110 cursor-pointer relative"
-                      style={{ height: `${(inflowData[i]/maxVal)*100}%` }}
+                      style={{ height: `${(inflowData[i] / maxVal) * 100}%` }}
                     >
                       <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-[#213145] text-[#eaf1ff] text-[10px] font-bold px-1.5 py-1 rounded-sm opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-20 whitespace-nowrap">
                         Inflow: {inflowData[i]}{trendSuffix || ' units'}
                       </div>
                     </div>
-                    <div 
+                    <div
                       className="w-2 md:w-3.5 bg-gradient-to-t from-secondary/70 to-secondary rounded-t-sm hover:brightness-110 cursor-pointer relative"
-                      style={{ height: `${(outflowData[i]/maxVal)*100}%` }}
+                      style={{ height: `${(outflowData[i] / maxVal) * 100}%` }}
                     >
                       <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-[#213145] text-[#eaf1ff] text-[10px] font-bold px-1.5 py-1 rounded-sm opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-20 whitespace-nowrap">
                         Outflow: {outflowData[i]}{trendSuffix || ' units'}
@@ -431,16 +431,16 @@ const Reports = ({ showToast, refreshTrigger }) => {
                 <svg viewBox="0 0 160 160" className="w-full h-full transform -rotate-90">
                   <circle cx="80" cy="80" r="62" fill="none" stroke="var(--surface-container-high)" strokeWidth="22" />
                   {donutSegments.map((seg) => (
-                    <circle 
+                    <circle
                       key={seg.name}
-                      cx="80" 
-                      cy="80" 
-                      r="62" 
-                      fill="none" 
-                      stroke={seg.color} 
-                      strokeWidth="22" 
-                      strokeDasharray={seg.strokeDasharray} 
-                      strokeDashoffset={seg.strokeDashoffset} 
+                      cx="80"
+                      cy="80"
+                      r="62"
+                      fill="none"
+                      stroke={seg.color}
+                      strokeWidth="22"
+                      strokeDasharray={seg.strokeDasharray}
+                      strokeDashoffset={seg.strokeDashoffset}
                     />
                   ))}
                 </svg>
@@ -561,7 +561,7 @@ const Reports = ({ showToast, refreshTrigger }) => {
         <div className="px-5 py-4 border-b border-outline-variant flex items-center justify-between">
           <h2 className="text-base font-bold text-on-surface">Detailed Movement Log</h2>
           <div className="flex items-center gap-2">
-            <select 
+            <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               className="px-2.5 py-1 border border-outline-variant rounded-sm bg-surface-lowest text-xs outline-none h-[30px]"
@@ -608,26 +608,26 @@ const Reports = ({ showToast, refreshTrigger }) => {
               ) : (
                 history.map((log) => {
                   const isIn = log.type === 'in';
-                return (
-                  <tr key={log._id} className="border-b border-outline-variant/30 hover:bg-surface-low transition-colors">
-                    <td className="p-3 text-outline">{formatDateString(log.date)}</td>
-                    <td className="p-3 font-semibold text-on-surface">{log.item}</td>
-                    <td className="p-3 font-mono text-[11px] text-on-surface-variant">{log.sku}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isIn ? 'bg-primary/10 text-primary' : 'bg-error-container text-error'}`}>
-                        {isIn ? 'Inflow' : 'Outflow'}
-                      </span>
-                    </td>
-                    <td className={`p-3 font-bold ${isIn ? 'text-primary' : 'text-error'}`}>
-                      {isIn ? '+' : '−'}{formatNumber(log.qty)}
-                    </td>
-                    <td className="p-3 text-outline">{log.gst}%</td>
-                    <td className="p-3 text-outline">{log.op}</td>
-                    <td className="p-3 text-outline">{log.loc}</td>
-                    <td className="p-3 text-right font-semibold text-on-surface">{formatINR(log.val)}</td>
-                  </tr>
-                );
-              }))}
+                  return (
+                    <tr key={log._id} className="border-b border-outline-variant/30 hover:bg-surface-low transition-colors">
+                      <td className="p-3 text-outline">{formatDateString(log.date)}</td>
+                      <td className="p-3 font-semibold text-on-surface">{log.item}</td>
+                      <td className="p-3 font-mono text-[11px] text-on-surface-variant">{log.sku}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isIn ? 'bg-primary/10 text-primary' : 'bg-error-container text-error'}`}>
+                          {isIn ? 'Inflow' : 'Outflow'}
+                        </span>
+                      </td>
+                      <td className={`p-3 font-bold ${isIn ? 'text-primary' : 'text-error'}`}>
+                        {isIn ? '+' : '−'}{formatNumber(log.qty)}
+                      </td>
+                      <td className="p-3 text-outline">{log.gst}%</td>
+                      <td className="p-3 text-outline">{log.op}</td>
+                      <td className="p-3 text-outline">{log.loc}</td>
+                      <td className="p-3 text-right font-semibold text-on-surface">{formatINR(log.val)}</td>
+                    </tr>
+                  );
+                }))}
               {!loading && history.length === 0 && (
                 <tr>
                   <td colSpan="9" className="p-10 text-center text-outline">

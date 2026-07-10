@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 
-const WorkerOverview = ({ searchVal, showToast }) => {
+const WorkerOverview = ({ searchVal, showToast, user }) => {
+  const userRole = user?.role || '';
+  const canEditSalary = userRole.toLowerCase() === 'owner' || userRole.toLowerCase() === 'supervisor';
   const [workers, setWorkers] = useState([]);
   const [selectedWorkerId, setSelectedWorkerId] = useState(null);
   const [performanceData, setPerformanceData] = useState([]);
@@ -116,14 +118,18 @@ const WorkerOverview = ({ searchVal, showToast }) => {
   const handleWorkerSubmit = async (e) => {
     e.preventDefault();
     if (!workerForm.name.trim()) return showToast('Name is required', 'error');
-    if (workerForm.salary < 0) return showToast('Salary cannot be negative', 'error');
+    if (canEditSalary && workerForm.salary < 0) return showToast('Salary cannot be negative', 'error');
 
     try {
       let res;
+      const formPayload = { ...workerForm };
+      if (!canEditSalary) {
+        delete formPayload.salary;
+      }
       if (editWorker) {
-        res = await api.updateWorker(editWorker._id, workerForm);
+        res = await api.updateWorker(editWorker._id, formPayload);
       } else {
-        res = await api.createWorker(workerForm);
+        res = await api.createWorker(formPayload);
       }
 
       if (res.success) {
@@ -448,7 +454,7 @@ const WorkerOverview = ({ searchVal, showToast }) => {
                         </p>
                         <p className="flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-outline text-[16px]">payments</span>
-                          Base salary: <strong className="text-on-surface">{formatSalary(selectedWorker.salary)}</strong>
+                          Base salary: <strong className="text-on-surface">{canEditSalary && selectedWorker.salary !== undefined ? formatSalary(selectedWorker.salary) : '••••••'}</strong>
                         </p>
                       </div>
                     </div>
@@ -804,12 +810,13 @@ const WorkerOverview = ({ searchVal, showToast }) => {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Base Salary (INR/Month)</label>
                     <input
-                      type="number"
-                      value={workerForm.salary}
-                      onChange={(e) => setWorkerForm(prev => ({ ...prev, salary: Number(e.target.value) }))}
-                      min="0"
-                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      type={canEditSalary ? "number" : "text"}
+                      value={canEditSalary ? (workerForm.salary ?? '') : '••••••'}
+                      onChange={(e) => canEditSalary && setWorkerForm(prev => ({ ...prev, salary: Number(e.target.value) }))}
+                      min={canEditSalary ? "0" : undefined}
+                      className={`w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium ${!canEditSalary ? 'opacity-60 cursor-not-allowed' : ''}`}
                       required
+                      disabled={!canEditSalary}
                     />
                   </div>
                 </div>
