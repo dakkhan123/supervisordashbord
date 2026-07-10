@@ -236,7 +236,8 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
       phone: '+91 98765 43210',
       role: 'Supervisor',
       unit: 'Unit Pune-A12',
-      address: 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057'
+      address: 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057',
+      dateOfBirth: '1990-01-01'
     };
   });
 
@@ -410,10 +411,18 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Assigned Unit / Warehouse</label>
-                  <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
-                    {profile.unit}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Date of Birth</label>
+                    <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
+                      {profile.dateOfBirth}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Assigned Unit / Warehouse</label>
+                    <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
+                      {profile.unit}
+                    </div>
                   </div>
                 </div>
 
@@ -581,6 +590,15 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
                 />
               </div>
               <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Date of Birth</label>
+                <input
+                  type="date"
+                  value={editProfileData.dateOfBirth || ''}
+                  onChange={(e) => setEditProfileData({...editProfileData, dateOfBirth: e.target.value})}
+                  className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Mailing Address</label>
                 <textarea
                   value={editProfileData.address}
@@ -601,6 +619,30 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
                 className="btn btn-primary bg-primary text-white text-xs font-bold px-5 py-2.5 rounded-sm hover:bg-primary-container flex items-center gap-1.5 shadow"
                 onClick={() => {
                   const { photoPreview, photoChanged, ...profileData } = editProfileData;
+                  
+                  // Phone number validation: must be > 9 digits
+                  const numericPhone = profileData.phone ? profileData.phone.replace(/\D/g, '') : '';
+                  if (numericPhone.length <= 9) {
+                    showToast('Phone number must have more than 9 digits', 'error');
+                    return;
+                  }
+
+                  // Date validation: valid date and not in the future
+                  if (profileData.dateOfBirth) {
+                    const dob = new Date(profileData.dateOfBirth);
+                    if (isNaN(dob.getTime())) {
+                      showToast('Invalid date format', 'error');
+                      return;
+                    }
+                    if (dob > new Date()) {
+                      showToast('Date of Birth cannot be in the future', 'error');
+                      return;
+                    }
+                  } else {
+                    showToast('Date of Birth is required', 'error');
+                    return;
+                  }
+
                   setProfile(profileData);
                   saveSettings('profile', profileData);
                   if (photoChanged) {

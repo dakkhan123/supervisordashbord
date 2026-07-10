@@ -114,9 +114,9 @@ class SalaryService {
     const tasksIncentive = tasksCompleted * 100; // default ₹100 per completed task
     const overtimeHours = 0;
     const overtimeRate = 150; // default ₹150/hour
-    const deductions = absentDays; // absence payout deductions in days
+    const deductions = absentDays * 100; // default ₹100 per absent day
     const advances = 0;
-    const amount = Math.max(0, baseSalary + tasksIncentive + (overtimeHours * overtimeRate) - Math.round((baseSalary / 22) * deductions) - advances);
+    const amount = Math.max(0, baseSalary + tasksIncentive + (overtimeHours * overtimeRate) - deductions - advances);
 
     return {
       worker: {
