@@ -13,7 +13,7 @@ const WorkerSchema = new mongoose.Schema({
   role: {
     type: String,
     required: [true, 'Please specify role (e.g. Worker, Supervisor)'],
-    enum: ['Worker', 'Supervisor'],
+    enum: ['Worker', 'Supervisor', 'Owner'],
     default: 'Worker'
   },
   salary: {

@@ -53,6 +53,7 @@ const seedPerformanceData = async () => {
 
     const tasks = [];
     const now = new Date();
+    const supervisor = workers.find(w => w.role === 'Supervisor') || workers[0];
     for (let i = 0; i < taskTitles.length; i++) {
       const worker = workers[i % workers.length];
       const daysAgo = Math.floor(Math.random() * 60);
@@ -64,13 +65,14 @@ const seedPerformanceData = async () => {
       dueDate.setDate(dueDate.getDate() + Math.floor(Math.random() * 10) + 2);
 
       const updatedDate = status === 'Completed' 
-        ? new Date(createdDate.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000) 
-        : new Date();
+         ? new Date(createdDate.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000) 
+         : new Date();
 
       tasks.push({
         title: taskTitles[i],
         description: `Task assigned to ${worker.name}`,
         assignedTo: worker._id,
+        assignedBy: supervisor._id,
         dueDate,
         status,
         createdAt: createdDate,

@@ -55,6 +55,9 @@ class AuthController {
         { expiresIn: '30d' }
       );
 
+      const userRole = user.role || '';
+      const isAuthorized = userRole.toLowerCase() === 'owner' || userRole.toLowerCase() === 'supervisor';
+
       res.status(201).json({
         success: true,
         token,
@@ -67,6 +70,7 @@ class AuthController {
             name: worker.name,
             phone: worker.phone,
             role: worker.role,
+            ...(isAuthorized ? { salary: worker.salary } : {}),
             status: worker.status
           }
         }
@@ -126,6 +130,9 @@ class AuthController {
         { expiresIn: '30d' }
       );
 
+      const userRole = user.role || '';
+      const isAuthorized = userRole.toLowerCase() === 'owner' || userRole.toLowerCase() === 'supervisor';
+
       res.status(200).json({
         success: true,
         token,
@@ -138,6 +145,7 @@ class AuthController {
             name: worker.name,
             phone: worker.phone,
             role: worker.role,
+            ...(isAuthorized ? { salary: worker.salary } : {}),
             status: worker.status
           }
         }
@@ -158,6 +166,9 @@ class AuthController {
         });
       }
 
+      const userRole = user.role || '';
+      const isAuthorized = userRole.toLowerCase() === 'owner' || userRole.toLowerCase() === 'supervisor';
+
       res.status(200).json({
         success: true,
         data: {
@@ -169,6 +180,7 @@ class AuthController {
             name: user.worker.name,
             phone: user.worker.phone,
             role: user.worker.role,
+            ...(isAuthorized ? { salary: user.worker.salary } : {}),
             status: user.worker.status
           } : null
         }
