@@ -3,6 +3,8 @@ const Worker = require('../models/Worker');
 const Attendance = require('../models/Attendance');
 const Task = require('../models/Task');
 
+const Notification = require('../models/Notification');
+
 class SalaryService {
   async getAllSalaries(queryParams) {
     const { worker, month } = queryParams || {};
@@ -12,8 +14,30 @@ class SalaryService {
     return await Salary.find(query).populate('worker').sort({ createdAt: -1 });
   }
 
+  async getMySalaries(workerId, queryParams) {
+    const { month } = queryParams || {};
+    let query = { worker: workerId };
+    if (month) query.month = month;
+    return await Salary.find(query).populate('worker').sort({ createdAt: -1 });
+  }
+
   async createSalary(salaryData) {
-    return await Salary.create(salaryData);
+    const log = await Salary.create(salaryData);
+    const populated = await Salary.findById(log._id).populate('worker');
+
+    if (log.worker) {
+      const workerObj = await Worker.findById(log.worker);
+      await Notification.create({
+        worker: log.worker,
+        user: workerObj ? workerObj.user : null,
+        title: 'Salary Record Generated',
+        message: `Salary details for ${log.month} updated: ₹${log.amount || log.netSalary}`,
+        description: `Status: ${log.status || log.paymentStatus}`,
+        type: 'salary'
+      });
+    }
+
+    return populated;
   }
 
   async getSalaryById(id) {
@@ -36,6 +60,18 @@ class SalaryService {
       error.statusCode = 404;
       throw error;
     }
+
+    if (log.worker) {
+      const workerObj = await Worker.findById(log.worker);
+      await Notification.create({
+        worker: log.worker,
+        user: workerObj ? workerObj.user : null,
+        title: 'Salary Record Updated',
+        message: `Salary for ${log.month} is set to ${log.status || log.paymentStatus}`,
+        type: 'salary'
+      });
+    }
+
     return log;
   }
 
@@ -48,6 +84,7 @@ class SalaryService {
     }
     return true;
   }
+
 
   async calculateSalary(workerId, monthStr) {
     if (!workerId || !monthStr) {

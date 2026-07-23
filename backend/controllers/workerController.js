@@ -87,6 +87,26 @@ class WorkerController {
     }
   }
 
+  async toggleWorkerStatus(req, res, next) {
+    try {
+      const { status } = req.body;
+      const worker = await workerService.toggleWorkerStatus(req.params.id, status || 'Active');
+      res.status(200).json({ success: true, data: worker });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async resetWorkerPassword(req, res, next) {
+    try {
+      const { newPassword } = req.body;
+      const result = await workerService.resetWorkerPassword(req.params.id, newPassword);
+      res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async deleteWorker(req, res, next) {
     try {
       await workerService.deleteWorker(req.params.id);
@@ -98,4 +118,5 @@ class WorkerController {
 }
 
 module.exports = new WorkerController();
+
 

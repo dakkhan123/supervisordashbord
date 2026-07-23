@@ -1,9 +1,22 @@
 const Notification = require('../models/Notification');
 
 class NotificationService {
-  async getAllNotifications() {
-    return await Notification.find().sort({ createdAt: -1 });
+  async getAllNotifications(filterParams) {
+    const { workerId, userId } = filterParams || {};
+    let query = {};
+    if (workerId || userId) {
+      query = {
+        $or: [
+          { worker: workerId },
+          { user: userId },
+          { worker: { $exists: false } },
+          { worker: null }
+        ]
+      };
+    }
+    return await Notification.find(query).sort({ createdAt: -1 });
   }
+
 
   async createNotification(notificationData) {
     const { title, message, type, itemId } = notificationData;

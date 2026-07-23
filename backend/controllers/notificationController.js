@@ -3,12 +3,14 @@ const notificationService = require('../services/notificationService');
 class NotificationController {
   async getAllNotifications(req, res, next) {
     try {
-      const notifications = await notificationService.getAllNotifications();
+      const filterParams = req.user ? { workerId: req.user.workerId, userId: req.user.id } : {};
+      const notifications = await notificationService.getAllNotifications(filterParams);
       res.status(200).json({ success: true, count: notifications.length, data: notifications });
     } catch (err) {
       next(err);
     }
   }
+
 
   async createNotification(req, res, next) {
     try {

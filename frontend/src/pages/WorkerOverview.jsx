@@ -96,6 +96,8 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     setEditWorker(null);
     setWorkerForm({
       name: '',
+      username: '',
+      password: '',
       phone: '',
       role: 'Worker',
       salary: 15000,
@@ -109,6 +111,8 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     setEditWorker(worker);
     setWorkerForm({
       name: worker.name || '',
+      username: worker.user?.username || (worker.name ? worker.name.toLowerCase().replace(/\s+/g, '') : ''),
+      password: '',
       phone: worker.phone || '',
       role: worker.role || 'Worker',
       salary: worker.salary || 15000,
@@ -117,6 +121,7 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     });
     setWorkerModalOpen(true);
   };
+
 
   const handleWorkerSubmit = async (e) => {
     e.preventDefault();
@@ -164,10 +169,27 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     }
   };
 
+  const handleResetPassword = async (worker) => {
+    const newPass = window.prompt(`Enter new password for ${worker.name}:`, 'Worker@123');
+    if (!newPass) return;
+    try {
+      const res = await api.resetWorkerPassword(worker._id, newPass);
+      if (res.success) {
+        showToast(`Password for ${worker.name} reset successfully`, 'success');
+      } else {
+        showToast(res.error || 'Failed to reset password', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error resetting password', 'error');
+    }
+  };
+
   const handleOpenDeleteConfirm = (worker) => {
     setWorkerToDelete(worker);
     setDeleteConfirmOpen(true);
   };
+
 
   const handleDeleteWorker = async () => {
     if (!workerToDelete) return;
@@ -483,6 +505,12 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                       {selectedWorker.status === 'Active' ? 'Deactivate' : 'Activate'}
                     </button>
                     <button
+                      onClick={() => handleResetPassword(selectedWorker)}
+                      className="btn border border-amber-500/30 hover:bg-amber-500/10 text-amber-700 text-[10px] font-bold px-3 py-1.5 rounded-sm transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">lock_reset</span>Reset Pass
+                    </button>
+                    <button
                       onClick={() => handleOpenEditModal(selectedWorker)}
                       className="btn border border-outline-variant hover:bg-surface-low text-on-surface-variant text-[10px] font-bold px-3 py-1.5 rounded-sm transition-all flex items-center gap-1 cursor-pointer"
                     >
@@ -495,6 +523,7 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                       <span className="material-symbols-outlined text-[14px]">delete</span>Delete Staff
                     </button>
                   </div>
+
                 </div>
 
                 {/* Performance and Attendance Summary Row */}
@@ -790,6 +819,32 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Worker Login ID (Username)</label>
+                    <input
+                      type="text"
+                      value={workerForm.username || ''}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, username: e.target.value }))}
+                      placeholder="e.g. ram.patil"
+                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">
+                      {editWorker ? 'Set New Password (Optional)' : 'Worker Password'}
+                    </label>
+                    <input
+                      type="password"
+                      value={workerForm.password || ''}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder={editWorker ? 'Leave blank to keep current' : 'e.g. Worker@123'}
+                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Phone Number</label>
                   <input
@@ -800,6 +855,7 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                     className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
                   />
                 </div>
+
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
