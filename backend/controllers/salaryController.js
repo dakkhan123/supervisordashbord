@@ -4,6 +4,11 @@ class SalaryController {
   async getAllSalaries(req, res, next) {
     try {
       const userRole = req.user ? req.user.role : '';
+      if (userRole.toLowerCase() === 'worker') {
+        const workerId = req.user.workerId;
+        const logs = await salaryService.getMySalaries(workerId, req.query);
+        return res.status(200).json({ success: true, count: logs.length, data: logs });
+      }
       if (userRole.toLowerCase() !== 'owner' && userRole.toLowerCase() !== 'supervisor') {
         return res.status(403).json({ success: false, message: 'Access denied: Cannot view salaries' });
       }
@@ -13,6 +18,17 @@ class SalaryController {
       next(err);
     }
   }
+
+  async getMySalaries(req, res, next) {
+    try {
+      const workerId = req.user ? req.user.workerId : req.query.workerId;
+      const logs = await salaryService.getMySalaries(workerId, req.query);
+      res.status(200).json({ success: true, count: logs.length, data: logs });
+    } catch (err) {
+      next(err);
+    }
+  }
+
 
   async calculateSalary(req, res, next) {
     try {

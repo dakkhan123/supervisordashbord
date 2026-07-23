@@ -22,6 +22,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { api } from './services/api';
 import { io as socketIO } from 'socket.io-client';
 
+import WorkerSidebar from './components/WorkerSidebar';
+import WorkerTopNav from './components/WorkerTopNav';
+import WorkerDashboard from './pages/worker/WorkerDashboard';
+import WorkerTasks from './pages/worker/WorkerTasks';
+import WorkerAttendance from './pages/worker/WorkerAttendance';
+import WorkerSalary from './pages/worker/WorkerSalary';
+import WorkerProfile from './pages/worker/WorkerProfile';
+
 function AppContent() {
   const location = useLocation();
   const [searchVal, setSearchVal] = useState('');
@@ -31,6 +39,7 @@ function AppContent() {
   const [notifications, setNotifications] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+
 
   // Programmatic Warm friendly double chime synth using Web Audio API
   const playNotificationSound = () => {
@@ -63,12 +72,21 @@ function AppContent() {
   };
 
   // Authentication states
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('smartops_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [appLoading, setAppLoading] = useState(true);
 
   const checkUserSession = async () => {
     const token = localStorage.getItem('smartops_token');
     if (!token) {
+      setUser(null);
+      localStorage.removeItem('smartops_user');
       setAppLoading(false);
       return;
     }
@@ -77,8 +95,11 @@ function AppContent() {
       const res = await api.getMe();
       if (res.success) {
         setUser(res.data);
+        localStorage.setItem('smartops_user', JSON.stringify(res.data));
       } else {
+        setUser(null);
         localStorage.removeItem('smartops_token');
+        localStorage.removeItem('smartops_user');
       }
     } catch (err) {
       console.error('Failed to verify session', err);
@@ -90,6 +111,7 @@ function AppContent() {
   useEffect(() => {
     checkUserSession();
   }, []);
+
 
   useEffect(() => {
     const token = localStorage.getItem('smartops_token');
@@ -127,8 +149,6 @@ function AppContent() {
     fetchAlertCount();
   }, [refreshTrigger, user]);
 
-  // Silent background poll every 15 seconds — only updates sidebar badge & notifications
-  // Does NOT call triggerRefresh() to avoid causing child page loading skeleton flicker
   useEffect(() => {
     const interval = setInterval(() => {
       fetchNotifications();
@@ -137,7 +157,6 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Real-time Socket.io connection for instant notification updates
   useEffect(() => {
     if (!user) return;
     const socket = socketIO({ path: '/socket.io', transports: ['websocket', 'polling'] });
@@ -171,7 +190,6 @@ function AppContent() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  // Handle Add/Edit Submit
   const handleAddEditSubmit = async (formData) => {
     try {
       let res;
@@ -195,7 +213,6 @@ function AppContent() {
     }
   };
 
-  // Handle Reorder Submit (directly replenishes the stock in MongoDB for immediate synchronization)
   const handleReorderSubmit = async (reorderData) => {
     try {
       const res = await api.reorderItem({
@@ -218,7 +235,6 @@ function AppContent() {
     }
   };
 
-  // Open Modals callbacks
   const openAddModal = () => {
     setEditItem(null);
     setAddModalOpen(true);
@@ -234,7 +250,6 @@ function AppContent() {
     setReorderModalOpen(true);
   };
 
-  // Determine Page details based on route
   const getPageMeta = () => {
     switch (location.pathname) {
       case '/':
@@ -275,15 +290,130 @@ function AppContent() {
     );
   }
 
+  // Unauthenticated Route Branching
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login showToast={showToast} onLoginSuccess={(u) => setUser(u)} />} />
+        <Route path="/register" element={<Register showToast={showToast} />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  const userRole = (user?.role || '').toLowerCase();
+
+  // Strict Role-Based Route Branching for Worker Users
+  if (userRole === 'worker') {
+    const handleLogout = () => {
+      localStorage.removeItem('smartops_token');
+      localStorage.removeItem('smartops_user');
+      setUser(null);
+      showToast('Logged out successfully', 'success');
+    };
+
+    return (
+      <div className="flex min-h-screen bg-[#0c1421] font-sans text-white">
+        <WorkerSidebar
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+          user={user}
+          onLogout={handleLogout}
+        />
+
+        <div className="flex-1 flex flex-col min-w-0 lg:pl-[240px]">
+          <WorkerTopNav
+            title="Smart Ops Dashboard"
+            user={user}
+            setMobileOpen={setMobileOpen}
+            notificationsCount={notifications.length}
+            onLogout={handleLogout}
+          />
+
+          <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-[1600px] mx-auto w-full">
+            <Routes>
+              <Route path="/login" element={<Login showToast={showToast} onLoginSuccess={(u) => setUser(u)} />} />
+              <Route
+                path="/worker"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerDashboard showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/tasks"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerTasks showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/attendance"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerAttendance showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/salary"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerSalary showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/profile"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerProfile showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/notifications"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerDashboard showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerProfile showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Catch-all for Worker: Redirect any non-worker URL to Worker Dashboard */}
+              <Route path="*" element={<Navigate to="/worker" replace />} />
+            </Routes>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+
+  // Supervisor Routes
   return (
     <Routes>
       <Route path="/login" element={<Login showToast={showToast} onLoginSuccess={(u) => setUser(u)} />} />
       <Route path="/register" element={<Register showToast={showToast} />} />
+
+      {/* Redirect any Worker URL requested by a Supervisor to Supervisor Dashboard */}
+      <Route path="/worker/*" element={<Navigate to="/" replace />} />
+
+      {/* Supervisor Layout & Control Center */}
       <Route
         path="/*"
         element={
-          <ProtectedRoute>
-            <div className="flex min-h-screen bg-background">
+          <ProtectedRoute allowedRoles={['Supervisor', 'Owner', 'Manager', 'Admin']}>
+            <div className="flex min-h-screen bg-background font-sans text-on-surface">
               <Sidebar 
                 mobileOpen={mobileOpen} 
                 setMobileOpen={setMobileOpen} 
@@ -291,6 +421,7 @@ function AppContent() {
                 user={user}
                 onLogout={() => {
                   localStorage.removeItem('smartops_token');
+                  localStorage.removeItem('smartops_user');
                   setUser(null);
                   showToast('Logged out successfully', 'success');
                 }}
@@ -392,6 +523,7 @@ function AppContent() {
                           user={user}
                           onLogout={() => {
                             localStorage.removeItem('smartops_token');
+                            localStorage.removeItem('smartops_user');
                             setUser(null);
                             showToast('Logged out successfully', 'success');
                           }}
@@ -427,13 +559,9 @@ function AppContent() {
                     <Route 
                       path="/salary" 
                       element={
-                        user && (user.role.toLowerCase() === 'owner' || user.role.toLowerCase() === 'supervisor') ? (
-                          <Salary 
-                            showToast={showToast} 
-                          />
-                        ) : (
-                          <Navigate to="/" replace />
-                        )
+                        <Salary 
+                          showToast={showToast} 
+                        />
                       } 
                     />
                   </Routes>
@@ -480,3 +608,4 @@ export default function App() {
     </Router>
   );
 }
+

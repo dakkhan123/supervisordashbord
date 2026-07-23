@@ -380,6 +380,60 @@ export const api = {
     return res.json();
   },
 
+  // Worker Management extensions
+  toggleWorkerStatus: async (id, status) => {
+    const res = await authFetch(`${API_URL}/workers/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+    return res.json();
+  },
+
+  resetWorkerPassword: async (id, newPassword) => {
+    const res = await authFetch(`${API_URL}/workers/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword })
+    });
+    return res.json();
+  },
+
+  // Worker Task extensions
+  getMyTasks: async (params) => {
+    const query = buildQueryString(params);
+    const res = await authFetch(`${API_URL}/tasks/my-tasks${query}`);
+    return res.json();
+  },
+
+  updateChecklistItem: async (taskId, itemId, isCompleted) => {
+    const res = await authFetch(`${API_URL}/tasks/${taskId}/checklist/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isCompleted })
+    });
+    return res.json();
+  },
+
+  submitCompletionNotes: async (id, notesData) => {
+    const res = await authFetch(`${API_URL}/tasks/${id}/complete`, {
+      method: 'POST',
+      body: JSON.stringify(notesData)
+    });
+    return res.json();
+  },
+
+  // Worker Attendance extensions
+  getMyAttendance: async (params) => {
+    const query = buildQueryString(params);
+    const res = await authFetch(`${API_URL}/attendance/my-attendance${query}`);
+    return res.json();
+  },
+
+  // Worker Salary extensions
+  getMySalaries: async (params) => {
+    const query = buildQueryString(params);
+    const res = await authFetch(`${API_URL}/salary/my-salary${query}`);
+    return res.json();
+  },
+
   // Escalation APIs
   getEscalations: async () => {
     const res = await authFetch(`${API_URL}/escalations`);
@@ -409,3 +463,4 @@ export const api = {
     return res.json();
   }
 };
+

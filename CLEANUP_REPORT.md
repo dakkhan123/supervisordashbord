@@ -65,4 +65,4 @@ Following these moves, the main project root folder remains highly structured an
 1. `smartops-supervisor/` contains the consolidated, active backend (Controller-Service pattern).
 2. `src/` contains the React Vite frontend.
 3. `archive/` isolates all legacy files so they do not conflict with runtime packages or indexers.
-4. Old root-level redundant modules are completely cleared from search results and dependency scanning.
+4. Old root-level redundant modules are completely cleared from search results and dependency scanning.................
