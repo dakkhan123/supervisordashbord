@@ -78,6 +78,49 @@ const AttendanceSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  employeeId: {
+    type: String,
+    default: ''
+  },
+  employeeName: {
+    type: String,
+    default: ''
+  },
+  role: {
+    type: String,
+    default: ''
+  },
+  department: {
+    type: String,
+    default: ''
+  },
+  site: {
+    type: String,
+    default: ''
+  },
+  attendanceType: {
+    type: String,
+    enum: ['Present', 'Late', 'Half Day', 'Absent', 'Leave', 'Holiday', 'Weekend', 'Overtime'],
+    default: 'Present'
+  },
+  latitude: {
+    type: Number
+  },
+  longitude: {
+    type: Number
+  },
+  address: {
+    type: String,
+    default: ''
+  },
+  ipAddress: {
+    type: String,
+    default: ''
+  },
+  device: {
+    type: String,
+    default: ''
+  },
   checkInDetails: authLogMetadataSchema,
   checkOutDetails: authLogMetadataSchema,
   breaks: [breakLogSchema],

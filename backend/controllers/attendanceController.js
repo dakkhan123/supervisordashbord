@@ -70,6 +70,69 @@ class AttendanceController {
       next(err);
     }
   }
+
+  async checkIn(req, res, next) {
+    try {
+      const workerId = req.user ? req.user.workerId : null;
+      const userId = req.user ? req.user.id : null;
+      if (!workerId) {
+        return res.status(400).json({ success: false, error: 'No linked worker profile found for this user.' });
+      }
+      const record = await attendanceService.checkIn(workerId, userId, req.body);
+      res.status(200).json({ success: true, data: record });
+    } catch (err) {
+      res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Server Error' });
+    }
+  }
+
+  async checkOut(req, res, next) {
+    try {
+      const workerId = req.user ? req.user.workerId : null;
+      const userId = req.user ? req.user.id : null;
+      if (!workerId) {
+        return res.status(400).json({ success: false, error: 'No linked worker profile found for this user.' });
+      }
+      const record = await attendanceService.checkOut(workerId, userId, req.body);
+      res.status(200).json({ success: true, data: record });
+    } catch (err) {
+      res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Server Error' });
+    }
+  }
+
+  async getTodayAttendance(req, res, next) {
+    try {
+      const workerId = req.user ? req.user.workerId : null;
+      if (!workerId) {
+        return res.status(200).json({ success: true, data: null });
+      }
+      const record = await attendanceService.getTodayAttendance(workerId);
+      res.status(200).json({ success: true, data: record });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getAttendanceMonth(req, res, next) {
+    try {
+      const workerId = req.user ? req.user.workerId : req.query.workerId;
+      if (!workerId) {
+        return res.status(400).json({ success: false, error: 'Worker ID is required.' });
+      }
+      const result = await attendanceService.getAttendanceMonth(workerId, req.query.month, req.query.year);
+      res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getAttendanceReport(req, res, next) {
+    try {
+      const records = await attendanceService.getAllAttendance(req.query);
+      res.status(200).json({ success: true, count: records.length, data: records });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new AttendanceController();

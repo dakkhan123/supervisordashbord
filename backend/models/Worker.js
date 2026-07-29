@@ -46,6 +46,14 @@ const WorkerSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  assignedSite: {
+    type: String,
+    default: 'Pune Head Office'
+  },
+  shiftTiming: {
+    type: String,
+    default: '9:00 AM - 6:00 PM'
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

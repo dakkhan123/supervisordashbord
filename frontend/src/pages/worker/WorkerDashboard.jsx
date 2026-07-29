@@ -50,6 +50,31 @@ const WorkerDashboard = ({ showToast }) => {
   const lateDays = attendance.filter(a => a.status === 'Late' || a.status === 'Half Day').length;
   const absentDays = attendance.filter(a => a.status === 'Absent' || a.status === 'Leave').length;
 
+  const todayRecord = attendance.find(a => {
+    const today = new Date().toISOString().split('T')[0];
+    const recDate = new Date(a.date).toISOString().split('T')[0];
+    return today === recDate;
+  });
+
+  const [sessionDuration, setSessionDuration] = useState('00:00:00');
+
+  useEffect(() => {
+    if (!todayRecord || !todayRecord.checkIn || todayRecord.checkOut) {
+      setSessionDuration('00:00:00');
+      return;
+    }
+    const updateDuration = () => {
+      const diffMs = new Date() - new Date(todayRecord.checkIn);
+      const hours = String(Math.floor(diffMs / 3600000)).padStart(2, '0');
+      const minutes = String(Math.floor((diffMs % 3600000) / 60000)).padStart(2, '0');
+      const seconds = String(Math.floor((diffMs % 60000) / 1000)).padStart(2, '0');
+      setSessionDuration(`${hours}:${minutes}:${seconds}`);
+    };
+    updateDuration();
+    const interval = setInterval(updateDuration, 1000);
+    return () => clearInterval(interval);
+  }, [todayRecord]);
+
   const workerName = user?.worker?.name || user?.name || user?.username || 'Suresh Kumar';
   const designation = user?.worker?.designation || 'Senior CNC Machinist';
   const department = user?.worker?.department || user?.department || 'Precision Machining Department';
@@ -92,9 +117,17 @@ const WorkerDashboard = ({ showToast }) => {
               <h3 className="text-sm font-bold text-white">Today's Attendance</h3>
               <p className="text-[11px] text-gray-400 font-medium mt-0.5">Real-time biometric shift status</p>
             </div>
-            <span className="px-2.5 py-1 bg-[#1a293e] text-gray-300 text-[10px] font-bold rounded-full border border-gray-600/30 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-              Not Clocked In
+            <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border flex items-center gap-1 ${
+              todayRecord?.checkOut 
+                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
+                : todayRecord?.checkIn 
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                todayRecord?.checkOut ? 'bg-rose-400' : todayRecord?.checkIn ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}></span>
+              {todayRecord?.checkOut ? 'Checked Out' : todayRecord?.checkIn ? 'Checked In' : 'Not Clocked In'}
             </span>
           </div>
 
@@ -103,22 +136,26 @@ const WorkerDashboard = ({ showToast }) => {
             <span className="material-symbols-outlined absolute right-2 bottom-0 text-[90px] text-white/5 select-none pointer-events-none">
               fingerprint
             </span>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">LIVE WORKING SESSION</p>
-            <h2 className="text-3xl font-black font-mono text-white mt-1">00:00:00</h2>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              {todayRecord?.checkOut ? 'SHIFT COMPLETE' : todayRecord?.checkIn ? 'LIVE WORKING SESSION' : 'AWAITING START'}
+            </p>
+            <h2 className="text-3xl font-black font-mono text-white mt-1">
+              {todayRecord?.checkOut ? (todayRecord.workingHours ? `${todayRecord.workingHours} hrs` : '00:00:00') : sessionDuration}
+            </h2>
           </div>
 
           <div className="grid grid-cols-3 gap-2 border-t border-[#1e2d42] pt-3 text-[11px]">
             <div>
               <p className="text-[10px] text-gray-400 font-semibold">Check-In</p>
-              <p className="font-bold text-white mt-0.5">--</p>
+              <p className="font-bold text-white mt-0.5">{todayRecord?.checkInTime || '--'}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 font-semibold">Check-Out</p>
-              <p className="font-bold text-white mt-0.5">--</p>
+              <p className="font-bold text-white mt-0.5">{todayRecord?.checkOutTime || '--'}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 font-semibold">Expected Out</p>
-              <p className="font-bold text-white mt-0.5">04:30 PM</p>
+              <p className="font-bold text-white mt-0.5">06:00 PM</p>
             </div>
           </div>
 

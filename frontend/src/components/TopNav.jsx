@@ -1,10 +1,70 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { NotificationBell } from './NotificationDrawer';
 import UserAvatar from './UserAvatar';
+import { api } from '../services/api';
 
 const TopNav = ({ title, breadcrumb, searchVal, setSearchVal, setMobileOpen, showToast, notifications, onBellClick, user }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [todayRecord, setTodayRecord] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTodayStatus = async () => {
+    try {
+      const res = await api.getTodayAttendance();
+      if (res.success) {
+        setTodayRecord(res.data);
+      }
+    } catch (e) {
+      console.error('Failed to get today attendance in TopNav', e);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchTodayStatus();
+    }
+  }, [user, location.pathname]);
+
+  const handleCheckOut = async () => {
+    if (!navigator.geolocation) {
+      return showToast('Geolocation is not supported by your browser to checkout.', 'error');
+    }
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await api.checkOut({
+            latitude,
+            longitude,
+            address: 'Pune Head Office (Clocked out from Navbar)',
+            ipAddress: '127.0.0.1',
+            device: 'Supervisor Console'
+          });
+          if (res.success) {
+            showToast('Clocked out successfully!', 'success');
+            setTodayRecord(res.data);
+            if (location.pathname === '/attendance') {
+              window.location.reload();
+            }
+          } else {
+            showToast(res.error || 'Failed to clock out', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('Connection failed', 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+      (error) => {
+        showToast('GPS coordinates required to clock out.', 'error');
+        setLoading(false);
+      }
+    );
+  };
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter' && searchVal?.trim()) {
@@ -44,7 +104,19 @@ const TopNav = ({ title, breadcrumb, searchVal, setSearchVal, setMobileOpen, sho
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        {todayRecord?.checkIn && !todayRecord?.checkOut && (
+          <button
+            onClick={handleCheckOut}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold uppercase tracking-wider transition-all shadow-md cursor-pointer hover:scale-[1.02] disabled:opacity-50 shrink-0"
+            title="Mark Shift Check-Out for Today"
+          >
+            <span className="material-symbols-outlined text-[15px] leading-none">logout</span>
+            {loading ? 'Clocking Out...' : 'Clock Out'}
+          </button>
+        )}
+
         {/* Notification Bell — opens Drawer */}
         <NotificationBell
           notifications={notifications}

@@ -21,6 +21,7 @@ import Salary from './pages/Salary';
 import ProtectedRoute from './components/ProtectedRoute';
 import { api } from './services/api';
 import { io as socketIO } from 'socket.io-client';
+import AttendancePopup from './components/AttendancePopup';
 
 import WorkerSidebar from './components/WorkerSidebar';
 import WorkerTopNav from './components/WorkerTopNav';
@@ -301,16 +302,17 @@ function AppContent() {
     );
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('smartops_token');
+    localStorage.removeItem('smartops_user');
+    setUser(null);
+    showToast('Logged out successfully', 'success');
+  };
+
   const userRole = (user?.role || '').toLowerCase();
 
   // Strict Role-Based Route Branching for Worker Users
   if (userRole === 'worker') {
-    const handleLogout = () => {
-      localStorage.removeItem('smartops_token');
-      localStorage.removeItem('smartops_user');
-      setUser(null);
-      showToast('Logged out successfully', 'success');
-    };
 
     return (
       <div className="flex min-h-screen bg-[#0c1421] font-sans text-white">
@@ -328,6 +330,7 @@ function AppContent() {
             setMobileOpen={setMobileOpen}
             notificationsCount={notifications.length}
             onLogout={handleLogout}
+            showToast={showToast}
           />
 
           <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-[1600px] mx-auto w-full">
@@ -394,6 +397,12 @@ function AppContent() {
             </Routes>
           </main>
         </div>
+        <AttendancePopup
+          user={user}
+          onLoginSuccess={(u) => { setUser(u); triggerRefresh(); }}
+          showToast={showToast}
+          onLogout={handleLogout}
+        />
       </div>
     );
   }
@@ -419,12 +428,7 @@ function AppContent() {
                 setMobileOpen={setMobileOpen} 
                 alertCount={alertCount} 
                 user={user}
-                onLogout={() => {
-                  localStorage.removeItem('smartops_token');
-                  localStorage.removeItem('smartops_user');
-                  setUser(null);
-                  showToast('Logged out successfully', 'success');
-                }}
+                onLogout={handleLogout}
               />
               
               <div className="flex-1 flex flex-col min-w-0 lg:pl-[260px]">
@@ -521,12 +525,7 @@ function AppContent() {
                           notifications={notifications}
                           onRefreshNotifications={fetchNotifications}
                           user={user}
-                          onLogout={() => {
-                            localStorage.removeItem('smartops_token');
-                            localStorage.removeItem('smartops_user');
-                            setUser(null);
-                            showToast('Logged out successfully', 'success');
-                          }}
+                          onLogout={handleLogout}
                         />
                       } 
                     />
@@ -592,6 +591,13 @@ function AppContent() {
                 notifications={notifications}
                 onRefresh={fetchNotifications}
                 showToast={showToast}
+              />
+
+              <AttendancePopup
+                user={user}
+                onLoginSuccess={(u) => { setUser(u); triggerRefresh(); }}
+                showToast={showToast}
+                onLogout={handleLogout}
               />
             </div>
           </ProtectedRoute>

@@ -1,10 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { api } from '../services/api';
 
-const WorkerTopNav = ({ user, setMobileOpen, onLogout, notificationsCount = 0 }) => {
+const WorkerTopNav = ({ user, setMobileOpen, onLogout, notificationsCount = 0, showToast }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [profileDropdown, setProfileDropdown] = useState(false);
+  const [todayRecord, setTodayRecord] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTodayStatus = async () => {
+    try {
+      const res = await api.getTodayAttendance();
+      if (res.success) {
+        setTodayRecord(res.data);
+      }
+    } catch (e) {
+      console.error('Failed to get today attendance in WorkerTopNav', e);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchTodayStatus();
+    }
+  }, [user, location.pathname]);
+
+  const handleCheckOut = async () => {
+    if (!navigator.geolocation) {
+      if (showToast) showToast('Geolocation is not supported by your browser to checkout.', 'error');
+      return;
+    }
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await api.checkOut({
+            latitude,
+            longitude,
+            address: 'Pune Head Office (Clocked out from Navbar)',
+            ipAddress: '127.0.0.1',
+            device: 'Worker Mobile App'
+          });
+          if (res.success) {
+            if (showToast) showToast('Clocked out successfully!', 'success');
+            setTodayRecord(res.data);
+            window.location.reload();
+          } else {
+            if (showToast) showToast(res.error || 'Failed to clock out', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          if (showToast) showToast('Connection failed', 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+      (error) => {
+        if (showToast) showToast('GPS coordinates required to clock out.', 'error');
+        setLoading(false);
+      }
+    );
+  };
 
   const getPageTitle = () => {
     switch (location.pathname) {
@@ -63,6 +121,18 @@ const WorkerTopNav = ({ user, setMobileOpen, onLogout, notificationsCount = 0 })
 
       {/* Right User Controls matching screenshot */}
       <div className="flex items-center gap-3">
+        {todayRecord?.checkIn && !todayRecord?.checkOut && (
+          <button
+            onClick={handleCheckOut}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold uppercase tracking-wider transition-all shadow-md cursor-pointer hover:scale-[1.02] disabled:opacity-50 shrink-0"
+            title="Mark Shift Check-Out for Today"
+          >
+            <span className="material-symbols-outlined text-[15px] leading-none">logout</span>
+            {loading ? 'Clocking Out...' : 'Clock Out'}
+          </button>
+        )}
+
         {/* Notification Bell */}
         <button
           onClick={() => navigate('/worker/notifications')}

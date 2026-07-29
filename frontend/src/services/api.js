@@ -338,8 +338,41 @@ export const api = {
     return res.json();
   },
 
+  checkIn: async (details) => {
+    const res = await authFetch(`${API_URL}/attendance/checkin`, {
+      method: 'POST',
+      body: JSON.stringify(details)
+    });
+    return res.json();
+  },
+
+  checkOut: async (details) => {
+    const res = await authFetch(`${API_URL}/attendance/checkout`, {
+      method: 'POST',
+      body: JSON.stringify(details)
+    });
+    return res.json();
+  },
+
+  getTodayAttendance: async () => {
+    const res = await authFetch(`${API_URL}/attendance/today`);
+    return res.json();
+  },
+
+  getAttendanceMonth: async (params) => {
+    const query = buildQueryString(params);
+    const res = await authFetch(`${API_URL}/attendance/month${query}`);
+    return res.json();
+  },
+
+  getAttendanceReport: async (params) => {
+    const query = buildQueryString(params);
+    const res = await authFetch(`${API_URL}/attendance/report${query}`);
+    return res.json();
+  },
+
   deleteAttendance: async (id) => {
-    const res = await authFetch(`${API_URL}/attendance/${id}`, {
+    const res = await authFetch(`${API_URL}/attendance/delete/${id}`, {
       method: 'DELETE'
     });
     return res.json();

@@ -4,6 +4,14 @@ const workerController = require('../controllers/workerController');
 
 const attendanceRouter = express.Router();
 attendanceRouter.get('/my-attendance', attendanceController.getMyAttendance);
+attendanceRouter.post('/checkin', attendanceController.checkIn);
+attendanceRouter.post('/checkout', attendanceController.checkOut);
+attendanceRouter.get('/today', attendanceController.getTodayAttendance);
+attendanceRouter.get('/history', attendanceController.getAllAttendance);
+attendanceRouter.get('/month', attendanceController.getAttendanceMonth);
+attendanceRouter.get('/report', attendanceController.getAttendanceReport);
+attendanceRouter.put('/update', attendanceController.updateAttendance);
+attendanceRouter.delete('/delete/:id', attendanceController.deleteAttendance);
 
 attendanceRouter.route('/')
   .get(attendanceController.getAllAttendance)
