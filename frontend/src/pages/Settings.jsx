@@ -237,7 +237,8 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
       role: 'Supervisor',
       unit: 'Unit Pune-A12',
       address: 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057',
-      dateOfBirth: '1990-01-01'
+      dateOfBirth: '1990-01-01',
+      dateOfJoining: '2024-01-15'
     };
   });
 
@@ -419,12 +420,20 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Date of Joining</label>
+                    <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
+                      {profile.dateOfJoining}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Assigned Unit / Warehouse</label>
                     <div className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface-variant font-semibold">
                       {profile.unit}
                     </div>
                   </div>
-                </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Unit Mailing Address</label>
@@ -433,6 +442,7 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           )}
 
@@ -589,14 +599,25 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
                   className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Date of Birth</label>
-                <input
-                  type="date"
-                  value={editProfileData.dateOfBirth || ''}
-                  onChange={(e) => setEditProfileData({...editProfileData, dateOfBirth: e.target.value})}
-                  className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Date of Birth</label>
+                  <input
+                    type="date"
+                    value={editProfileData.dateOfBirth || ''}
+                    onChange={(e) => setEditProfileData({...editProfileData, dateOfBirth: e.target.value})}
+                    className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Date of Joining</label>
+                  <input
+                    type="date"
+                    value={editProfileData.dateOfJoining || ''}
+                    onChange={(e) => setEditProfileData({...editProfileData, dateOfJoining: e.target.value})}
+                    className="w-full px-3 py-2 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  />
+                </div>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Mailing Address</label>

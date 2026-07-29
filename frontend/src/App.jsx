@@ -279,6 +279,12 @@ function AppContent() {
     }
   };
 
+  useEffect(() => {
+    if (location.pathname === '/worker/notifications') {
+      setNotificationDrawerOpen(true);
+    }
+  }, [location.pathname]);
+
   const { title, breadcrumb } = getPageMeta();
 
   if (appLoading) {
@@ -293,11 +299,14 @@ function AppContent() {
   // Unauthenticated Route Branching
   if (!user) {
     return (
-      <Routes>
-        <Route path="/login" element={<Login showToast={showToast} onLoginSuccess={(u) => setUser(u)} />} />
-        <Route path="/register" element={<Register showToast={showToast} />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <div className="relative min-h-screen bg-background font-sans text-on-surface">
+        <Routes>
+          <Route path="/login" element={<Login showToast={showToast} onLoginSuccess={(u) => setUser(u)} />} />
+          <Route path="/register" element={<Register showToast={showToast} />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+      </div>
     );
   }
 
@@ -313,7 +322,7 @@ function AppContent() {
     };
 
     return (
-      <div className="flex min-h-screen bg-[#0c1421] font-sans text-white">
+      <div className="flex min-h-screen bg-background font-sans text-on-surface relative">
         <WorkerSidebar
           mobileOpen={mobileOpen}
           setMobileOpen={setMobileOpen}
@@ -327,6 +336,7 @@ function AppContent() {
             user={user}
             setMobileOpen={setMobileOpen}
             notificationsCount={notifications.length}
+            onBellClick={() => setNotificationDrawerOpen(true)}
             onLogout={handleLogout}
           />
 
@@ -394,6 +404,17 @@ function AppContent() {
             </Routes>
           </main>
         </div>
+
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+        {/* Global Notification Drawer for Worker */}
+        <NotificationDrawer
+          isOpen={notificationDrawerOpen}
+          onClose={() => setNotificationDrawerOpen(false)}
+          notifications={notifications}
+          onRefresh={fetchNotifications}
+          showToast={showToast}
+        />
       </div>
     );
   }
