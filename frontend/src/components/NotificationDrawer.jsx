@@ -39,6 +39,13 @@ const TYPE_CONFIG = {
   restock_created:   { icon: 'shopping_cart',    color: 'text-indigo-600',  bg: 'bg-indigo-50',     border: 'border-indigo-200',  label: 'Restock Request',    badge: 'bg-indigo-100 text-indigo-700' },
   restock_approved:  { icon: 'task_alt',         color: 'text-emerald-600', bg: 'bg-emerald-50',    border: 'border-emerald-200', label: 'Restock Approved',   badge: 'bg-emerald-100 text-emerald-700' },
   restock_rejected:  { icon: 'cancel',           color: 'text-red-600',     bg: 'bg-red-50',        border: 'border-red-200',     label: 'Restock Rejected',   badge: 'bg-red-100 text-red-700' },
+  assignment:        { icon: 'assignment',       color: 'text-purple-600',  bg: 'bg-purple-50',     border: 'border-purple-200',  label: 'Task Assigned',     badge: 'bg-purple-100 text-purple-700' },
+  due:               { icon: 'event_upcoming',   color: 'text-amber-600',   bg: 'bg-amber-50',      border: 'border-amber-200',   label: 'Task Due Soon',      badge: 'bg-amber-100 text-amber-700' },
+  overdue:           { icon: 'alarm_off',        color: 'text-red-600',     bg: 'bg-red-50',        border: 'border-red-200',     label: 'Task Overdue',       badge: 'bg-red-100 text-red-700' },
+  announcement:      { icon: 'campaign',         color: 'text-blue-600',    bg: 'bg-blue-50',       border: 'border-blue-200',    label: 'Announcement',       badge: 'bg-blue-100 text-blue-700' },
+  approval:          { icon: 'how_to_reg',       color: 'text-indigo-600',  bg: 'bg-indigo-50',     border: 'border-indigo-200',  label: 'Approval Required',   badge: 'bg-indigo-100 text-indigo-700' },
+  attendance:        { icon: 'fingerprint',      color: 'text-teal-600',    bg: 'bg-teal-50',       border: 'border-teal-200',    label: 'Attendance Log',     badge: 'bg-teal-100 text-teal-700' },
+  salary:            { icon: 'payments',         color: 'text-emerald-600', bg: 'bg-emerald-50',    border: 'border-emerald-200', label: 'Salary & Earnings',   badge: 'bg-emerald-100 text-emerald-700' },
 };
 
 const getConfig = (type) => TYPE_CONFIG[type] || {
@@ -49,18 +56,52 @@ const getConfig = (type) => TYPE_CONFIG[type] || {
 /* ─────────────────────────────────────────────
    Notification Detail Modal
 ───────────────────────────────────────────── */
-function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead }) {
+export function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead }) {
   const cfg = getConfig(notification.type);
   const navigate = useNavigate();
 
   const handleNavigate = () => {
     onClose();
+    const userStr = localStorage.getItem('smartops_user');
+    let isWorker = window.location.pathname.startsWith('/worker');
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        if ((u.role || '').toLowerCase() === 'worker') isWorker = true;
+      } catch (e) {}
+    }
+
     const { type } = notification;
-    if (type === 'low_stock' || type === 'critical_stock') navigate('/alerts', { state: { tab: 'dashboards' } });
-    else if (type === 'item_added' || type === 'item_updated' || type === 'item_deleted') navigate('/inventory');
-    else if (type === 'stock_increase' || type === 'stock_decrease' || type === 'stock_replenished') navigate('/reports');
-    else if (type?.startsWith('restock_')) navigate('/alerts', { state: { tab: 'requests' } });
-    else navigate('/inventory');
+
+    if (isWorker) {
+      if (type === 'assignment' || type === 'due' || type === 'overdue' || type === 'approval' || type?.includes('task')) {
+        navigate('/worker/tasks');
+      } else if (type === 'attendance') {
+        navigate('/worker/attendance');
+      } else if (type === 'salary') {
+        navigate('/worker/salary');
+      } else {
+        navigate('/worker');
+      }
+    } else {
+      if (type === 'low_stock' || type === 'critical_stock') {
+        navigate('/alerts', { state: { tab: 'dashboards' } });
+      } else if (type === 'item_added' || type === 'item_updated' || type === 'item_deleted') {
+        navigate('/inventory');
+      } else if (type === 'stock_increase' || type === 'stock_decrease' || type === 'stock_replenished') {
+        navigate('/reports');
+      } else if (type?.startsWith('restock_')) {
+        navigate('/alerts', { state: { tab: 'requests' } });
+      } else if (type === 'assignment' || type === 'due' || type === 'overdue' || type === 'approval' || type?.includes('task')) {
+        navigate('/tasks');
+      } else if (type === 'attendance') {
+        navigate('/attendance');
+      } else if (type === 'salary') {
+        navigate('/salary');
+      } else {
+        navigate('/inventory');
+      }
+    }
   };
 
   useEffect(() => {
@@ -69,6 +110,9 @@ function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const bodyMessage = notification.message || notification.description || 'No detailed message content provided.';
+  const timestampDate = notification.createdAt || notification.date || Date.now();
+
   return (
     <div
       className="fixed inset-0 z-[1100] flex items-center justify-center p-4"
@@ -76,7 +120,7 @@ function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-md bg-surface border border-outline-variant/60 rounded-2xl shadow-2xl overflow-hidden"
         style={{ animation: 'slideUpFade 0.22s cubic-bezier(.4,0,.2,1)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -102,7 +146,7 @@ function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg hover:bg-surface-container flex items-center justify-center text-outline transition-colors"
+            className="w-7 h-7 rounded-lg hover:bg-surface-container flex items-center justify-center text-outline transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
@@ -111,16 +155,16 @@ function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead
         {/* Body */}
         <div className="px-5 py-4 space-y-4">
           <div>
-            <p className="text-[11px] font-semibold text-outline uppercase tracking-wider mb-1">Message</p>
-            <p className="text-sm text-on-surface leading-relaxed">{notification.message}</p>
+            <p className="text-[11px] font-semibold text-outline uppercase tracking-wider mb-1">Message Details</p>
+            <p className="text-sm text-on-surface leading-relaxed whitespace-pre-line">{bodyMessage}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-surface-low rounded-xl p-3">
+            <div className="bg-surface-low rounded-xl p-3 border border-outline-variant/30">
               <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mb-1">Received</p>
-              <p className="text-[12px] font-semibold text-on-surface">{formatTimeAgo(notification.createdAt)}</p>
+              <p className="text-[12px] font-semibold text-on-surface">{formatTimeAgo(timestampDate)}</p>
             </div>
-            <div className="bg-surface-low rounded-xl p-3">
+            <div className="bg-surface-low rounded-xl p-3 border border-outline-variant/30">
               <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mb-1">Status</p>
               <p className={`text-[12px] font-semibold ${notification.isRead ? 'text-outline' : 'text-primary'}`}>
                 {notification.isRead ? 'Read' : 'Unread'}
@@ -128,15 +172,22 @@ function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead
             </div>
           </div>
 
-          <div className="bg-surface-low rounded-xl p-3">
-            <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mb-1">Timestamp</p>
-            <p className="text-[11px] font-mono text-on-surface-variant">{formatFullDate(notification.createdAt)}</p>
+          <div className="bg-surface-low rounded-xl p-3 border border-outline-variant/30">
+            <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mb-1">Full Timestamp</p>
+            <p className="text-[11px] font-mono text-on-surface">{formatFullDate(timestampDate)}</p>
           </div>
 
           {notification.itemId && (
-            <div className="bg-surface-low rounded-xl p-3">
+            <div className="bg-surface-low rounded-xl p-3 border border-outline-variant/30">
               <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mb-1">Item Reference</p>
-              <p className="text-[11px] font-mono text-on-surface">{notification.itemId}</p>
+              <p className="text-[11px] font-mono text-on-surface font-bold">{notification.itemId}</p>
+            </div>
+          )}
+
+          {notification.taskId && (
+            <div className="bg-surface-low rounded-xl p-3 border border-outline-variant/30">
+              <p className="text-[10px] font-semibold text-outline uppercase tracking-wider mb-1">Task Reference</p>
+              <p className="text-[11px] font-mono text-on-surface font-bold">{notification.taskId}</p>
             </div>
           )}
         </div>
@@ -145,14 +196,14 @@ function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead
         <div className="px-5 pb-5 flex gap-2">
           <button
             onClick={handleNavigate}
-            className="flex-1 h-9 flex items-center justify-center gap-1.5 bg-primary text-white rounded-xl text-[12px] font-bold hover:bg-primary/90 transition-colors"
+            className="flex-1 h-9 flex items-center justify-center gap-1.5 bg-primary text-white rounded-xl text-[12px] font-bold hover:bg-primary-container transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
-            View Details
+            Go to Details Page
           </button>
           <button
             onClick={() => { onToggleRead(notification._id, !notification.isRead); onClose(); }}
-            className="h-9 px-3 flex items-center gap-1.5 border border-outline-variant rounded-xl text-[12px] font-semibold text-on-surface-variant hover:bg-surface-low transition-colors"
+            className="h-9 px-3 flex items-center gap-1.5 border border-outline-variant rounded-xl text-[12px] font-semibold text-on-surface hover:bg-surface-low transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
               {notification.isRead ? 'mark_as_unread' : 'done_all'}
@@ -161,7 +212,7 @@ function NotificationDetailModal({ notification, onClose, onDelete, onToggleRead
           </button>
           <button
             onClick={() => { onDelete(notification._id); onClose(); }}
-            className="h-9 px-3 flex items-center gap-1.5 border border-red-200 rounded-xl text-[12px] font-semibold text-red-600 hover:bg-red-50 transition-colors"
+            className="h-9 px-3 flex items-center gap-1.5 border border-red-200 rounded-xl text-[12px] font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
           </button>
