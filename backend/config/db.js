@@ -7,9 +7,9 @@ dns.setServers([
 ])
 
 const connectDB = async () => {
-  const uri = process.env.MONGO_URI;
+  const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
   if (!uri) {
-    console.error('🔴 Error: MONGO_URI is not defined in the environment variables.');
+    console.error('🔴 Error: Neither MONGO_URI nor MONGODB_URI is defined in the environment variables.');
     process.exit(1);
   }
   const MAX_RETRIES = 5;
