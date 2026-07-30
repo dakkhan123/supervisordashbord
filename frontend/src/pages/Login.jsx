@@ -87,12 +87,12 @@ const Login = ({ showToast, onLoginSuccess }) => {
           </div>
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">SmartOps</h1>
-            <p className="text-[10px] text-[#5dd9d8] font-bold uppercase tracking-wider">Enterprise Operations Portal</p>
+            <p className="text-[10px] text-teal-300 font-bold uppercase tracking-wider">Enterprise Operations Portal</p>
           </div>
         </div>
 
         <div className="my-8 md:my-0 z-10">
-          <span className="inline-block px-3 py-1 bg-[#5dd9d8]/20 text-[#5dd9d8] text-[10px] font-extrabold rounded-full uppercase tracking-wider mb-3">
+          <span className="inline-block px-3 py-1 bg-white/20 text-white text-[10px] font-extrabold rounded-full uppercase tracking-wider mb-3">
             {roleMode === 'supervisor' ? 'Supervisor Mode' : 'Worker Mode'}
           </span>
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 leading-tight">
@@ -133,7 +133,7 @@ const Login = ({ showToast, onLoginSuccess }) => {
               onClick={() => setRoleMode('worker')}
               className={`flex-1 py-2.5 px-3 rounded-md text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 roleMode === 'worker'
-                  ? 'bg-[#213145] text-[#5dd9d8] shadow-md'
+                  ? 'bg-primary text-white shadow-md'
                   : 'text-outline hover:text-on-surface'
               }`}
             >
@@ -186,11 +186,7 @@ const Login = ({ showToast, onLoginSuccess }) => {
 
             <button
               type="submit"
-              className={`btn font-extrabold py-3 px-4 rounded-sm transition-all active:scale-98 shadow-sm flex items-center justify-center gap-2 mt-2 disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider ${
-                roleMode === 'supervisor'
-                  ? 'bg-primary text-white hover:bg-primary-container'
-                  : 'bg-[#213145] text-[#5dd9d8] hover:bg-[#1a2737]'
-              }`}
+              className="btn font-extrabold py-3 px-4 rounded-sm transition-all active:scale-98 shadow-sm flex items-center justify-center gap-2 mt-2 disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider bg-primary text-white hover:bg-primary-container"
               disabled={loading}
             >
               {loading ? (
