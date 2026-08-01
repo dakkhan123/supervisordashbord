@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import UserAvatar from '../components/UserAvatar';
 
 const Attendance = ({ showToast }) => {
   const [workers, setWorkers] = useState([]);
@@ -10,7 +9,7 @@ const Attendance = ({ showToast }) => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Current logged in user profile (to verify Admin/Supervisor controls)
+  // Current logged in user profile
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('smartops_user');
@@ -54,7 +53,7 @@ const Attendance = ({ showToast }) => {
   const [timelineEndDate, setTimelineEndDate] = useState('');
   const [timelineSort, setTimelineSort] = useState('newest');
 
-  // Manual record modal state (Approvals / corrections)
+  // Manual record modal state
   const [showManualModal, setShowManualModal] = useState(false);
   const [manualWorker, setManualWorker] = useState('');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
@@ -150,16 +149,16 @@ const Attendance = ({ showToast }) => {
   const presenceRate = loggedCount > 0 ? Math.round((presentCount / loggedCount) * 100) : 0;
   const compliancePct = activeWorkerCount > 0 ? Math.round((loggedCount / activeWorkerCount) * 100) : 0;
 
-  // Formatting classes
+  // Status Badge Styling matching Task Allocation theme
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case 'Present': return 'bg-teal-500/10 text-teal-400 border border-teal-500/20';
-      case 'Late': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
-      case 'Half Day': return 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
-      case 'Absent': return 'bg-red-500/10 text-red-400 border border-red-500/20';
-      case 'Leave': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
-      case 'Holiday': return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
-      default: return 'bg-slate-800 text-slate-400 border border-slate-700/50';
+      case 'Present': return 'bg-primary/10 text-primary border border-primary/20';
+      case 'Late': return 'bg-amber-500/10 text-amber-700 border border-amber-500/20';
+      case 'Half Day': return 'bg-orange-500/10 text-orange-700 border border-orange-500/20';
+      case 'Absent': return 'bg-error/10 text-error border border-error/20';
+      case 'Leave': return 'bg-blue-500/10 text-blue-700 border border-blue-500/20';
+      case 'Holiday': return 'bg-purple-500/10 text-purple-700 border border-purple-500/20';
+      default: return 'bg-surface-low text-outline border border-outline-variant';
     }
   };
 
@@ -167,19 +166,6 @@ const Attendance = ({ showToast }) => {
     if (!dateStr) return 'N/A';
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-
-  const formatDateTime = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    const d = new Date(dateStr);
-    return d.toLocaleString('en-IN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
   };
 
   // Historical filtering
@@ -224,62 +210,6 @@ const Attendance = ({ showToast }) => {
     } finally {
       setWorkerHistoryLoading(false);
     }
-  };
-
-  const getDayOfWeek = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-IN', { weekday: 'long' });
-  };
-
-  const getFilteredTimeline = () => {
-    let filtered = [...workerHistory];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (timelineFilter === 'Today') {
-      filtered = filtered.filter(h => {
-        const recordDate = new Date(h.date);
-        recordDate.setHours(0, 0, 0, 0);
-        return recordDate.getTime() === today.getTime();
-      });
-    } else if (timelineFilter === 'This Week') {
-      const startOfWeek = new Date(today);
-      const day = startOfWeek.getDay();
-      const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-      startOfWeek.setDate(diff);
-      startOfWeek.setHours(0, 0, 0, 0);
-      
-      filtered = filtered.filter(h => {
-        const recordDate = new Date(h.date);
-        return recordDate >= startOfWeek;
-      });
-    } else if (timelineFilter === 'This Month') {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      filtered = filtered.filter(h => {
-        const recordDate = new Date(h.date);
-        return recordDate >= startOfMonth;
-      });
-    } else if (timelineFilter === 'Custom') {
-      if (timelineStartDate) {
-        const start = new Date(timelineStartDate);
-        start.setHours(0, 0, 0, 0);
-        filtered = filtered.filter(h => new Date(h.date) >= start);
-      }
-      if (timelineEndDate) {
-        const end = new Date(timelineEndDate);
-        end.setHours(23, 59, 59, 999);
-        filtered = filtered.filter(h => new Date(h.date) <= end);
-      }
-    }
-
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return timelineSort === 'newest' ? dateB - dateA : dateA - dateB;
-    });
-
-    return filtered;
   };
 
   // Export CSV Handler
@@ -337,15 +267,15 @@ const Attendance = ({ showToast }) => {
         <head>
           <title>SmartOps Attendance Registry Report</title>
           <style>
-            body { font-family: sans-serif; padding: 25px; color: #1e293b; background-color: #fff; }
-            h1 { color: #0f766e; border-bottom: 2px solid #0f766e; padding-bottom: 10px; margin-bottom: 5px; }
-            .meta { font-size: 11px; color: #64748b; margin-bottom: 20px; font-weight: bold; }
+            body { font-family: sans-serif; padding: 25px; color: #0b1c30; background-color: #fff; }
+            h1 { color: #006a6a; border-bottom: 2px solid #006a6a; padding-bottom: 10px; margin-bottom: 5px; }
+            .meta { font-size: 11px; color: #6d7a79; margin-bottom: 20px; font-weight: bold; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 11px; }
-            th { background-color: #f1f5f9; font-weight: bold; text-transform: uppercase; color: #475569; }
+            th, td { border: 1px solid #bcc9c8; padding: 8px 12px; text-align: left; font-size: 11px; }
+            th { background-color: #eff4ff; font-weight: bold; text-transform: uppercase; color: #3d4949; }
             .badge { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; }
-            .Present { background: #d1fae5; color: #065f46; }
-            .Absent { background: #fee2e2; color: #991b1b; }
+            .Present { background: #e6f4f4; color: #006a6a; }
+            .Absent { background: #ffdad6; color: #ba1a1a; }
             .Late { background: #fef3c7; color: #92400e; }
             .Half-Day { background: #ffedd5; color: #9a3412; }
             .Leave { background: #dbeafe; color: #1e40af; }
@@ -392,7 +322,7 @@ const Attendance = ({ showToast }) => {
     showToast('Sent attendance log to printer', 'success');
   };
 
-  // Submit manual log (correction approval)
+  // Submit manual log
   const handleAddManualLog = async (e) => {
     e.preventDefault();
     if (!manualWorker) return showToast('Please select an employee profile', 'error');
@@ -472,45 +402,45 @@ const Attendance = ({ showToast }) => {
   const isUserAuthorized = currentUser?.role?.toLowerCase() === 'owner' || currentUser?.role?.toLowerCase() === 'supervisor' || currentUser?.role?.toLowerCase() === 'admin';
 
   return (
-    <div className="flex flex-col gap-6 text-white font-sans">
-      {/* Page Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4 border-b border-slate-800 pb-5">
+    <div className="flex flex-col gap-6 text-on-surface font-body animate-fade-in">
+      {/* Page Header (Matches Task Allocation Header) */}
+      <div className="flex items-start justify-between flex-wrap gap-4 border-b border-outline-variant pb-5">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-teal-400 text-[32px]">co_present</span>
+          <h1 className="text-3xl font-extrabold text-on-surface tracking-tight flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-[32px]">co_present</span>
             Attendance Registry
           </h1>
-          <p className="text-slate-400 text-xs mt-1">
+          <p className="text-on-surface-variant text-sm mt-1">
             Monitor and manage daily check-ins, geofencing coordinates, and export audit reports.
           </p>
         </div>
 
-        {/* Global Toolbar */}
+        {/* Action Toolbar */}
         <div className="flex items-center gap-3">
           {isUserAuthorized && (
             <button
               onClick={() => setShowManualModal(true)}
-              className="btn bg-teal-600 hover:bg-teal-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+              className="btn bg-primary hover:bg-primary-container text-white font-bold py-2.5 px-4 rounded-sm text-xs flex items-center gap-1.5 transition-all shadow-sm uppercase tracking-wider cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">add_task</span>
+              <span className="material-symbols-outlined text-[18px]">add_task</span>
               Manual Correction
             </button>
           )}
 
-          <div className="flex items-center gap-2 text-xs text-slate-400 font-bold bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl shadow-inner">
-            <span className="material-symbols-outlined text-[16px] text-teal-400">calendar_month</span>
+          <div className="flex items-center gap-2 text-xs text-on-surface-variant font-bold bg-surface-lowest border border-outline-variant px-3.5 py-2 rounded-sm shadow-sm">
+            <span className="material-symbols-outlined text-[18px] text-primary">calendar_month</span>
             <input 
               type="date" 
               value={selectedDate} 
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="outline-none text-slate-200 bg-transparent cursor-pointer font-mono font-bold"
+              className="outline-none text-on-surface bg-transparent cursor-pointer font-mono font-bold"
             />
           </div>
         </div>
       </div>
 
-      {/* Tabs Menu Panel */}
-      <div className="flex bg-slate-950/40 p-1 border border-slate-800/80 rounded-2xl w-fit">
+      {/* Tabs Menu Panel (Matching clean white pill layout) */}
+      <div className="flex bg-surface-lowest p-1.5 border border-outline-variant rounded-md shadow-sm w-fit gap-1 overflow-x-auto">
         {[
           { id: 'dashboard', label: 'Console Dashboard', icon: 'analytics' },
           { id: 'history', label: 'Shift Logs History', icon: 'receipt_long' },
@@ -520,13 +450,13 @@ const Attendance = ({ showToast }) => {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === t.id 
-                ? 'bg-teal-600 text-white shadow-md' 
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-primary/10 text-primary border border-primary/20 shadow-none' 
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-low border border-transparent'
             }`}
           >
-            <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
+            <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
             {t.label}
           </button>
         ))}
@@ -534,16 +464,16 @@ const Attendance = ({ showToast }) => {
 
       {/* Loading Overlay */}
       {loading && activeTab === 'dashboard' ? (
-        <div className="p-20 text-center flex flex-col items-center justify-center gap-4 bg-slate-900/40 border border-slate-800 rounded-3xl">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-400"></div>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Syncing attendance sheets...</p>
+        <div className="p-20 text-center flex flex-col items-center justify-center gap-4 bg-surface-lowest border border-outline-variant rounded-md shadow-sm">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-xs text-outline font-bold uppercase tracking-wider">Syncing attendance sheets...</p>
         </div>
       ) : error ? (
-        <div className="p-16 text-center flex flex-col items-center justify-center gap-4 bg-slate-900/40 border border-slate-800 rounded-3xl">
-          <span className="material-symbols-outlined text-[48px] text-rose-500">error</span>
-          <p className="text-sm font-bold text-white">Database Sync Failed</p>
-          <p className="text-xs text-slate-400">{error}</p>
-          <button onClick={fetchData} className="btn bg-teal-600 text-white text-xs px-4 py-2 rounded-lg">Retry Sync</button>
+        <div className="p-16 text-center flex flex-col items-center justify-center gap-4 bg-surface-lowest border border-outline-variant rounded-md shadow-sm">
+          <span className="material-symbols-outlined text-[48px] text-error">error</span>
+          <p className="text-sm font-bold text-on-surface">Database Sync Failed</p>
+          <p className="text-xs text-outline">{error}</p>
+          <button onClick={fetchData} className="btn bg-primary text-white text-xs px-4 py-2 rounded-sm hover:bg-primary-container">Retry Sync</button>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
@@ -554,74 +484,98 @@ const Attendance = ({ showToast }) => {
               
               {/* Distribution Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col gap-4">
+                <div className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm flex flex-col gap-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Marked Compliance Meter</span>
-                    <span className="text-xs font-black text-teal-400">{compliancePct}% Logs Recorded</span>
+                    <span className="text-[10px] font-bold text-outline uppercase tracking-wider">Marked Compliance Meter</span>
+                    <span className="text-xs font-extrabold text-primary">{compliancePct}% Logs Recorded</span>
                   </div>
-                  <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
-                    <div className="bg-teal-500 h-full rounded-full transition-all duration-500" style={{ width: `${compliancePct}%` }} />
+                  <div className="w-full bg-surface-low h-3 rounded-full overflow-hidden border border-outline-variant">
+                    <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: `${compliancePct}%` }} />
                   </div>
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+                  <div className="flex items-center justify-between text-xs font-semibold text-on-surface-variant">
                     <span>Logged Records: {loggedCount} / {activeWorkerCount} workers</span>
-                    <span className="text-amber-400">{activeWorkerCount - loggedCount} Pending Clock-ins</span>
+                    <span className="text-amber-600 font-bold">{activeWorkerCount - loggedCount} Pending Clock-ins</span>
                   </div>
                 </div>
 
-                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col gap-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Status Distribution Today</span>
-                  <div className="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800">
+                <div className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm flex flex-col gap-4">
+                  <span className="text-[10px] font-bold text-outline uppercase tracking-wider">Attendance Status Distribution Today</span>
+                  <div className="w-full h-3.5 bg-surface-low rounded-full overflow-hidden flex border border-outline-variant">
                     {presentCount > 0 && (
-                      <div className="bg-teal-500 h-full" style={{ width: `${((presentCount - lateCountToday) / (loggedCount || 1)) * 100}%` }} title={`On-Time Present`} />
+                      <div className="bg-primary h-full" style={{ width: `${((presentCount - lateCountToday) / (loggedCount || 1)) * 100}%` }} title={`On-Time Present`} />
                     )}
                     {lateCountToday > 0 && (
                       <div className="bg-amber-500 h-full" style={{ width: `${(lateCountToday / (loggedCount || 1)) * 100}%` }} title={`Late Arrivals`} />
                     )}
                     {absentCount > 0 && (
-                      <div className="bg-red-500 h-full" style={{ width: `${(absentCount / (loggedCount || 1)) * 100}%` }} title={`Absent`} />
+                      <div className="bg-error h-full" style={{ width: `${(absentCount / (loggedCount || 1)) * 100}%` }} title={`Absent`} />
                     )}
                     {leaveCount > 0 && (
                       <div className="bg-blue-500 h-full" style={{ width: `${(leaveCount / (loggedCount || 1)) * 100}%` }} title={`On Leave`} />
                     )}
                     {loggedCount === 0 && (
-                      <div className="w-full h-full bg-slate-800" title="No logs marked" />
+                      <div className="w-full h-full bg-outline-variant/40" title="No logs marked" />
                     )}
                   </div>
-                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 flex-wrap gap-2">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal-500 block"></span>On-Time: {presentCount - lateCountToday}</span>
+                  <div className="flex items-center justify-between text-xs font-semibold text-on-surface-variant flex-wrap gap-2">
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-primary block"></span>On-Time: {presentCount - lateCountToday}</span>
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 block"></span>Late: {lateCountToday}</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 block"></span>Absent: {absentCount}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-error block"></span>Absent: {absentCount}</span>
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 block"></span>Leave: {leaveCount}</span>
                   </div>
                 </div>
               </div>
 
-              {/* KPI Scorecards */}
+              {/* Interactive KPI Cards (Matching Task Allocation 4-tile style in Image 2) */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-slate-900/50 border border-slate-800 p-5 rounded-2xl shadow-md flex flex-col justify-between gap-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Staff Registry</span>
-                  <div className="text-3xl font-black text-white leading-none mt-2">{activeWorkerCount}</div>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Marked in operations</span>
-                </div>
-
-                <div className="bg-slate-900/50 border border-slate-800 p-5 rounded-2xl shadow-md flex flex-col justify-between gap-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Marked Present</span>
-                  <div className="text-3xl font-black text-teal-400 leading-none mt-2">{presentCount}</div>
-                  <span className="text-[10px] text-teal-400/80 font-bold uppercase">Checked In today</span>
-                </div>
-
-                <div className="bg-slate-900/50 border border-slate-800 p-5 rounded-2xl shadow-md flex flex-col justify-between gap-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Late / Absent</span>
-                  <div className="text-3xl font-black text-amber-500 leading-none mt-2">
-                    {lateCountToday} <span className="text-sm font-bold text-red-400">/ {absentCount}</span>
+                {/* Active Staff Registry */}
+                <div className="bg-surface-lowest border border-outline-variant p-4 rounded-md shadow-sm flex flex-col justify-between min-h-[105px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-bold text-outline uppercase tracking-wider">Active Staff Registry</span>
+                    <div className="w-8 h-8 rounded-lg bg-surface-variant/40 flex items-center justify-center text-outline">
+                      <span className="material-symbols-outlined icon-sm">badge</span>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-rose-400 font-bold uppercase">Logged warnings</span>
+                  <div className="text-[24px] font-extrabold text-on-surface leading-none">{activeWorkerCount}</div>
+                  <span className="text-[10px] text-outline font-semibold uppercase mt-1">Marked in operations</span>
                 </div>
 
-                <div className="bg-slate-900/50 border border-slate-800 p-5 rounded-2xl shadow-md flex flex-col justify-between gap-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Daily Presence Ratio</span>
-                  <div className="text-3xl font-black text-teal-400 leading-none mt-2">{presenceRate}%</div>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Compliance Score</span>
+                {/* Marked Present */}
+                <div className="bg-surface-lowest border border-outline-variant p-4 rounded-md shadow-sm flex flex-col justify-between min-h-[105px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-bold text-outline uppercase tracking-wider">Marked Present</span>
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined icon-sm">check_circle</span>
+                    </div>
+                  </div>
+                  <div className="text-[24px] font-extrabold text-primary leading-none">{presentCount}</div>
+                  <span className="text-[10px] text-primary font-bold uppercase mt-1">Checked In today</span>
+                </div>
+
+                {/* Late / Absent */}
+                <div className="bg-surface-lowest border border-outline-variant p-4 rounded-md shadow-sm flex flex-col justify-between min-h-[105px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-bold text-outline uppercase tracking-wider">Late / Absent</span>
+                    <div className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center text-error">
+                      <span className="material-symbols-outlined icon-sm">warning</span>
+                    </div>
+                  </div>
+                  <div className="text-[24px] font-extrabold text-error leading-none">
+                    {lateCountToday} <span className="text-sm font-bold text-error/80">/ {absentCount}</span>
+                  </div>
+                  <span className="text-[10px] text-error font-bold uppercase mt-1">Logged warnings</span>
+                </div>
+
+                {/* Daily Presence Ratio */}
+                <div className="bg-surface-lowest border border-outline-variant p-4 rounded-md shadow-sm flex flex-col justify-between min-h-[105px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-bold text-outline uppercase tracking-wider">Daily Presence Ratio</span>
+                    <div className="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+                      <span className="material-symbols-outlined icon-sm">analytics</span>
+                    </div>
+                  </div>
+                  <div className="text-[24px] font-extrabold text-tertiary leading-none">{presenceRate}%</div>
+                  <span className="text-[10px] text-tertiary font-bold uppercase mt-1">Compliance Score</span>
                 </div>
               </div>
             </div>
@@ -631,19 +585,19 @@ const Attendance = ({ showToast }) => {
           {activeTab === 'history' && (
             <div className="flex flex-col gap-4">
               
-              {/* History Search & Filters toolbar */}
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-lg">
+              {/* Search & Filters Panel */}
+              <div className="bg-surface-lowest border border-outline-variant rounded-md p-4 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full lg:flex-1">
                   
                   {/* Name Search */}
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">search</span>
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
                     <input
                       type="text"
                       placeholder="Search name/employee ID..."
                       value={historySearch}
                       onChange={(e) => setHistorySearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-teal-500 transition-all font-medium"
+                      className="w-full pl-9 pr-4 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs text-on-surface outline-none focus:border-primary transition-all font-medium"
                     />
                   </div>
 
@@ -651,7 +605,7 @@ const Attendance = ({ showToast }) => {
                   <select
                     value={historyStatusFilter}
                     onChange={(e) => setHistoryStatusFilter(e.target.value)}
-                    className="py-2 px-3.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 outline-none focus:border-teal-500 cursor-pointer font-bold"
+                    className="py-2 px-3 bg-surface-low border border-outline-variant rounded-sm text-xs text-on-surface outline-none focus:border-primary cursor-pointer font-bold"
                   >
                     <option value="All">All Statuses</option>
                     <option value="Present">Present (On-Time)</option>
@@ -665,7 +619,7 @@ const Attendance = ({ showToast }) => {
                   <select
                     value={historySiteFilter}
                     onChange={(e) => setHistorySiteFilter(e.target.value)}
-                    className="py-2 px-3.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 outline-none focus:border-teal-500 cursor-pointer font-bold"
+                    className="py-2 px-3 bg-surface-low border border-outline-variant rounded-sm text-xs text-on-surface outline-none focus:border-primary cursor-pointer font-bold"
                   >
                     <option value="All">All Locations / Sites</option>
                     <option value="Pune Head Office">Pune Head Office</option>
@@ -674,34 +628,34 @@ const Attendance = ({ showToast }) => {
                   </select>
 
                   {/* Date Picker Filter */}
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 rounded-xl">
-                    <span className="material-symbols-outlined text-[16px] text-slate-500">event</span>
+                  <div className="flex items-center gap-2 bg-surface-low border border-outline-variant px-3 rounded-sm">
+                    <span className="material-symbols-outlined text-[16px] text-outline">event</span>
                     <input
                       type="date"
                       value={historyDateFilter}
                       onChange={(e) => setHistoryDateFilter(e.target.value)}
-                      className="outline-none text-xs text-slate-300 bg-transparent cursor-pointer py-1.5 w-full font-mono"
+                      className="outline-none text-xs text-on-surface bg-transparent cursor-pointer py-1.5 w-full font-mono font-bold"
                     />
                     {historyDateFilter && (
-                      <button onClick={() => setHistoryDateFilter('')} className="text-slate-500 hover:text-rose-400">
+                      <button onClick={() => setHistoryDateFilter('')} className="text-outline hover:text-error">
                         <span className="material-symbols-outlined text-[14px]">close</span>
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Print/Export buttons */}
+                {/* Print / Export Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={handlePrintLogs}
-                    className="btn border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                    className="btn border border-outline-variant hover:bg-surface-low text-on-surface-variant text-xs font-bold px-4 py-2 rounded-sm flex items-center gap-1.5 transition-all cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">print</span>
                     Print
                   </button>
                   <button
                     onClick={handleExportCSV}
-                    className="btn bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                    className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold px-4 py-2 rounded-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-sm uppercase tracking-wider"
                   >
                     <span className="material-symbols-outlined text-[16px]">download</span>
                     Export CSV
@@ -709,93 +663,100 @@ const Attendance = ({ showToast }) => {
                 </div>
               </div>
 
-              {/* History Table Container */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-lg overflow-hidden">
+              {/* History Table Container (Matches Task Allocation Table) */}
+              <div className="bg-surface-lowest border border-outline-variant rounded-md shadow-sm overflow-hidden">
                 {historyLoading ? (
                   <div className="p-20 text-center flex flex-col items-center justify-center gap-3">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-400"></div>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Syncing timeline logs...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <p className="text-xs text-outline font-bold uppercase tracking-wider">Syncing timeline logs...</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto max-h-[550px] overflow-y-auto scrollbar-thin">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="bg-slate-950/60 border-b border-slate-800 sticky top-0 z-[5] backdrop-blur-md">
-                          <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                          <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee Details</th>
-                          <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Logs (In / Out)</th>
-                          <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Shift Hours</th>
-                          <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">GPS Geofence</th>
-                          <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                          {isUserAuthorized && <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Edit Logs</th>}
+                        <tr className="bg-surface-low border-b border-outline-variant sticky top-0 z-[5]">
+                          <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Date</th>
+                          <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Employee Details</th>
+                          <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Logs (In / Out)</th>
+                          <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Shift Hours</th>
+                          <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">GPS Geofence</th>
+                          <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Status</th>
+                          {isUserAuthorized && <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider text-right">Actions</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {filteredHistory.map(h => (
-                          <tr key={h._id} className="border-b border-slate-800/40 hover:bg-slate-800/30 transition-colors">
-                            <td className="p-4 font-bold text-white whitespace-nowrap">
+                          <tr key={h._id} className="border-b border-outline-variant/30 hover:bg-surface-low transition-colors duration-150">
+                            <td className="p-3.5 font-bold text-on-surface whitespace-nowrap">
                               {formatDate(h.date)}
                             </td>
-                            <td className="p-4">
+                            <td className="p-3.5">
                               <div className="flex flex-col gap-0.5">
-                                <span className="font-bold text-slate-200">{h.employeeName || h.worker?.name || 'Unknown Staff'}</span>
-                                <span className="text-[10px] text-slate-500 font-mono">
+                                <span className="font-bold text-on-surface">{h.employeeName || h.worker?.name || 'Unknown Staff'}</span>
+                                <span className="text-[11px] text-outline font-mono">
                                   {h.employeeId || h.worker?.employeeId || 'N/A'} · {h.role || h.worker?.role || 'Worker'}
                                 </span>
                               </div>
                             </td>
-                            <td className="p-4 font-mono font-semibold text-slate-300">
-                              <div className="flex flex-col text-[10px] gap-0.5">
-                                <span>In: <span className="text-teal-400 font-bold">{h.checkInTime || '-'}</span></span>
-                                <span>Out: <span className="text-rose-400 font-bold">{h.checkOutTime || '-'}</span></span>
+                            <td className="p-3.5 font-mono font-semibold text-on-surface-variant">
+                              <div className="flex flex-col text-[11px] gap-0.5">
+                                <span>In: <span className="text-primary font-bold">{h.checkInTime || '-'}</span></span>
+                                <span>Out: <span className="text-error font-bold">{h.checkOutTime || '-'}</span></span>
                               </div>
                             </td>
-                            <td className="p-4">
+                            <td className="p-3.5">
                               <div className="flex flex-col gap-0.5">
-                                <span className="font-bold text-white">{h.workingHours ? `${h.workingHours} hrs` : '--'}</span>
-                                {h.overtimeHours > 0 && <span className="text-[9px] text-emerald-400 font-bold">OT: +{h.overtimeHours} hrs</span>}
+                                <span className="font-bold text-on-surface">{h.workingHours ? `${h.workingHours} hrs` : '--'}</span>
+                                {h.overtimeHours > 0 && <span className="text-[10px] text-primary font-bold">OT: +{h.overtimeHours} hrs</span>}
                               </div>
                             </td>
-                            <td className="p-4">
+                            <td className="p-3.5">
                               {h.latitude && h.longitude ? (
                                 <a
                                   href={`https://www.google.com/maps/search/?api=1&query=${h.latitude},${h.longitude}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-teal-400 hover:text-teal-300 font-bold hover:underline"
+                                  className="inline-flex items-center gap-1 text-primary hover:underline font-bold"
                                   title="View Check-In coordinates on Google Maps"
                                 >
                                   <span className="material-symbols-outlined text-[14px]">map</span>
                                   {h.site || 'Pune office'}
                                 </a>
                               ) : (
-                                <span className="text-slate-500">Manual Entry</span>
+                                <span className="text-outline">Manual Entry</span>
                               )}
                             </td>
-                            <td className="p-4">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${getStatusBadgeClass(h.status)}`}>
+                            <td className="p-3.5">
+                              <span className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase ${getStatusBadgeClass(h.status)}`}>
                                 {h.status}
                               </span>
                             </td>
                             {isUserAuthorized && (
-                              <td className="p-4 text-right whitespace-nowrap">
+                              <td className="p-3.5 text-right whitespace-nowrap">
                                 <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => setSelectedRecord(h)}
+                                    className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors cursor-pointer"
+                                    title="View Details"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                  </button>
                                   <button
                                     onClick={() => {
                                       setEditRecord(h);
                                       setShowEditModal(true);
                                     }}
-                                    className="p-1.5 rounded-lg border border-slate-800 hover:border-teal-500 hover:text-teal-400 transition-all cursor-pointer"
+                                    className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors cursor-pointer"
                                     title="Edit Log"
                                   >
-                                    <span className="material-symbols-outlined text-[16px] leading-none">edit</span>
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
                                   </button>
                                   <button
                                     onClick={() => handleDeleteRecord(h._id)}
-                                    className="p-1.5 rounded-lg border border-slate-800 hover:border-rose-500 hover:text-rose-400 transition-all cursor-pointer"
+                                    className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-error transition-colors cursor-pointer"
                                     title="Delete Log"
                                   >
-                                    <span className="material-symbols-outlined text-[16px] leading-none">delete</span>
+                                    <span className="material-symbols-outlined text-[16px]">delete</span>
                                   </button>
                                 </div>
                               </td>
@@ -804,7 +765,7 @@ const Attendance = ({ showToast }) => {
                         ))}
                         {filteredHistory.length === 0 && (
                           <tr>
-                            <td colSpan="7" className="p-16 text-center text-slate-500 font-bold italic">
+                            <td colSpan="7" className="p-16 text-center text-outline font-semibold italic">
                               No history entries matched the search filters.
                             </td>
                           </tr>
@@ -822,24 +783,24 @@ const Attendance = ({ showToast }) => {
             <div className="flex flex-col gap-5">
               
               {/* Reports Query Bar */}
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
+              <div className="bg-surface-lowest border border-outline-variant rounded-md p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
                 <div className="relative w-full md:max-w-[280px]">
-                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">search</span>
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
                   <input
                     type="text"
                     placeholder="Search by worker name..."
                     value={reportSearch}
                     onChange={(e) => setReportSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-teal-500 transition-all font-medium"
+                    className="w-full pl-9 pr-4 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs text-on-surface outline-none focus:border-primary transition-all font-medium"
                   />
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase">Target Month:</span>
+                  <span className="text-[11px] font-bold text-outline uppercase">Target Month:</span>
                   <select
                     value={reportMonth}
                     onChange={(e) => setReportMonth(parseInt(e.target.value, 10))}
-                    className="py-1.5 px-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 font-bold outline-none cursor-pointer"
+                    className="py-1.5 px-3 bg-surface-low border border-outline-variant rounded-sm text-xs text-on-surface font-bold outline-none cursor-pointer"
                   >
                     {[
                       { num: 1, name: 'January' },
@@ -883,50 +844,50 @@ const Attendance = ({ showToast }) => {
                     <div 
                       key={w._id}
                       onClick={() => handleWorkerCardClick(w)}
-                      className="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl shadow-md flex flex-col justify-between gap-4 cursor-pointer hover:border-teal-500 hover:bg-slate-900/95 transition-all duration-200"
+                      className="bg-surface-lowest border border-outline-variant p-5 rounded-md shadow-sm flex flex-col justify-between gap-4 cursor-pointer hover:border-primary hover:shadow-md transition-all duration-150"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-teal-500/10 border-2 border-teal-500/20 flex items-center justify-center font-bold text-teal-400">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary">
                           {w.name.charAt(0)}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-bold text-sm text-white truncate">{w.name}</h4>
-                          <p className="text-[10px] text-slate-400 mt-0.5">
+                          <h4 className="font-bold text-sm text-on-surface truncate">{w.name}</h4>
+                          <p className="text-[11px] text-outline mt-0.5">
                             {w.role} · ID: <span className="font-mono">{w.employeeId || 'N/A'}</span>
                           </p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-5 gap-1.5 text-center text-slate-300 text-[11px] font-semibold py-2.5 bg-slate-950 rounded-xl">
+                      <div className="grid grid-cols-5 gap-1.5 text-center text-on-surface text-[11px] font-semibold py-2.5 bg-surface-low border border-outline-variant/40 rounded-sm">
                         <div>
-                          <p className="text-teal-400 font-black">{pCount}</p>
-                          <p className="text-[8px] uppercase tracking-wider text-slate-500">Present</p>
+                          <p className="text-primary font-black">{pCount}</p>
+                          <p className="text-[8px] uppercase tracking-wider text-outline">Present</p>
                         </div>
                         <div>
-                          <p className="text-amber-400 font-black">{lCount}</p>
-                          <p className="text-[8px] uppercase tracking-wider text-slate-500">Late</p>
+                          <p className="text-amber-600 font-black">{lCount}</p>
+                          <p className="text-[8px] uppercase tracking-wider text-outline">Late</p>
                         </div>
                         <div>
-                          <p className="text-orange-400 font-black">{hCount}</p>
-                          <p className="text-[8px] uppercase tracking-wider text-slate-500">Half</p>
+                          <p className="text-orange-600 font-black">{hCount}</p>
+                          <p className="text-[8px] uppercase tracking-wider text-outline">Half</p>
                         </div>
                         <div>
-                          <p className="text-blue-400 font-black">{leaveCount}</p>
-                          <p className="text-[8px] uppercase tracking-wider text-slate-500">Leave</p>
+                          <p className="text-blue-600 font-black">{leaveCount}</p>
+                          <p className="text-[8px] uppercase tracking-wider text-outline">Leave</p>
                         </div>
                         <div>
-                          <p className="text-red-400 font-black">{aCount}</p>
-                          <p className="text-[8px] uppercase tracking-wider text-slate-500">Absent</p>
+                          <p className="text-error font-black">{aCount}</p>
+                          <p className="text-[8px] uppercase tracking-wider text-outline">Absent</p>
                         </div>
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        <div className="flex items-center justify-between text-[9px] font-bold text-outline uppercase tracking-wider">
                           <span>Shift Presence Rate</span>
-                          <span className={`font-bold ${rate >= 80 ? 'text-teal-400' : 'text-rose-400'}`}>{rate}%</span>
+                          <span className={`font-bold ${rate >= 80 ? 'text-primary' : 'text-error'}`}>{rate}%</span>
                         </div>
-                        <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800/80">
-                          <div className={`h-full rounded-full transition-all duration-300 ${rate >= 80 ? 'bg-teal-500' : 'bg-rose-500'}`} style={{ width: `${rate}%` }} />
+                        <div className="w-full bg-surface-low h-2 rounded-full overflow-hidden border border-outline-variant/60">
+                          <div className={`h-full rounded-full transition-all duration-300 ${rate >= 80 ? 'bg-primary' : 'bg-error'}`} style={{ width: `${rate}%` }} />
                         </div>
                       </div>
                     </div>
@@ -941,50 +902,50 @@ const Attendance = ({ showToast }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
               {/* Shift Timing Config */}
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col gap-4 shadow-lg">
-                <h3 className="text-base font-extrabold text-white flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-teal-400 text-[20px]">schedule</span>
+              <div className="bg-surface-lowest border border-outline-variant rounded-md p-6 flex flex-col gap-4 shadow-sm">
+                <h3 className="text-base font-extrabold text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[20px]">schedule</span>
                   Office Shift Schedule Rules
                 </h3>
-                <p className="text-xs text-slate-400 font-medium">
+                <p className="text-xs text-outline font-medium">
                   Configure default operational shift window timings and grace limits for punctuality audits.
                 </p>
 
-                <div className="flex flex-col gap-4 border-t border-slate-800/50 pt-4 mt-1 font-semibold text-xs text-slate-300">
+                <div className="flex flex-col gap-4 border-t border-outline-variant pt-4 mt-1 font-semibold text-xs text-on-surface">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] text-slate-500 uppercase tracking-widest">Shift Check-In Start</label>
+                      <label className="text-[10px] text-outline uppercase tracking-wider">Shift Check-In Start</label>
                       <input
                         type="text"
                         value={shiftTimings.start}
                         onChange={(e) => setShiftTimings({ ...shiftTimings, start: e.target.value })}
-                        className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none font-mono text-center text-teal-400 font-bold focus:border-teal-500"
+                        className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none font-mono text-center text-primary font-bold focus:border-primary"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] text-slate-500 uppercase tracking-widest">Shift Checkout End</label>
+                      <label className="text-[10px] text-outline uppercase tracking-wider">Shift Checkout End</label>
                       <input
                         type="text"
                         value={shiftTimings.end}
                         onChange={(e) => setShiftTimings({ ...shiftTimings, end: e.target.value })}
-                        className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none font-mono text-center text-rose-400 font-bold focus:border-teal-500"
+                        className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none font-mono text-center text-error font-bold focus:border-primary"
                       />
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-slate-500 uppercase tracking-widest">Late Arrival Grace Threshold (Minutes)</label>
+                    <label className="text-[10px] text-outline uppercase tracking-wider">Late Arrival Grace Threshold (Minutes)</label>
                     <input
                       type="number"
                       value={shiftTimings.grace}
                       onChange={(e) => setShiftTimings({ ...shiftTimings, grace: parseInt(e.target.value, 10) })}
-                      className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none font-mono text-center focus:border-teal-500"
+                      className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none font-mono text-center focus:border-primary"
                     />
                   </div>
 
                   <button
                     onClick={() => showToast('Operational shift timings updated successfully', 'success')}
-                    className="btn bg-teal-600 hover:bg-teal-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all mt-2 w-full"
+                    className="btn bg-primary hover:bg-primary-container text-white font-bold py-2.5 px-4 rounded-sm text-xs uppercase tracking-wider transition-all mt-2 w-full shadow-sm cursor-pointer"
                   >
                     Save Timing Configurations
                   </button>
@@ -992,26 +953,26 @@ const Attendance = ({ showToast }) => {
               </div>
 
               {/* Holidays Manager */}
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col gap-4 shadow-lg">
-                <h3 className="text-base font-extrabold text-white flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-teal-400 text-[20px]">holiday_village</span>
+              <div className="bg-surface-lowest border border-outline-variant rounded-md p-6 flex flex-col gap-4 shadow-sm">
+                <h3 className="text-base font-extrabold text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[20px]">holiday_village</span>
                   Company Holidays Calendar
                 </h3>
-                <p className="text-xs text-slate-400 font-medium">
+                <p className="text-xs text-outline font-medium">
                   Add or edit annual office holidays that automatically bypass worker logging checks.
                 </p>
 
                 {/* Holiday list */}
-                <div className="flex-1 flex flex-col gap-2 max-h-[220px] overflow-y-auto scrollbar-thin pr-1 border-t border-slate-800/50 pt-3">
+                <div className="flex-1 flex flex-col gap-2 max-h-[220px] overflow-y-auto scrollbar-thin pr-1 border-t border-outline-variant pt-3">
                   {holidays.map((h, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-surface-low border border-outline-variant rounded-sm text-xs">
                       <div>
-                        <p className="font-bold text-white">{h.name}</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5 font-mono">{formatDate(h.date)}</p>
+                        <p className="font-bold text-on-surface">{h.name}</p>
+                        <p className="text-[10px] text-outline mt-0.5 font-mono">{formatDate(h.date)}</p>
                       </div>
                       <button
                         onClick={() => handleRemoveHoliday(idx)}
-                        className="p-1 rounded text-rose-400 hover:bg-rose-500/10 cursor-pointer"
+                        className="p-1 rounded text-error hover:bg-error/10 cursor-pointer"
                         title="Remove Holiday"
                       >
                         <span className="material-symbols-outlined text-[16px]">close</span>
@@ -1021,13 +982,13 @@ const Attendance = ({ showToast }) => {
                 </div>
 
                 {/* Add holiday form */}
-                <form onSubmit={handleAddHoliday} className="grid grid-cols-2 gap-3 mt-2 border-t border-slate-800/40 pt-3">
+                <form onSubmit={handleAddHoliday} className="grid grid-cols-2 gap-3 mt-2 border-t border-outline-variant pt-3">
                   <input
                     type="text"
                     placeholder="Holiday title..."
                     value={newHolidayName}
                     onChange={(e) => setNewHolidayName(e.target.value)}
-                    className="p-2 px-3.5 bg-slate-950 border border-slate-800 rounded-xl text-xs outline-none focus:border-teal-500 font-semibold"
+                    className="p-2 px-3.5 bg-surface-low border border-outline-variant rounded-sm text-xs outline-none focus:border-primary font-semibold text-on-surface"
                     required
                   />
                   <div className="flex gap-2">
@@ -1035,12 +996,12 @@ const Attendance = ({ showToast }) => {
                       type="date"
                       value={newHolidayDate}
                       onChange={(e) => setNewHolidayDate(e.target.value)}
-                      className="p-2 px-2 bg-slate-950 border border-slate-800 rounded-xl text-xs outline-none focus:border-teal-500 font-mono cursor-pointer flex-1"
+                      className="p-2 px-2 bg-surface-low border border-outline-variant rounded-sm text-xs outline-none focus:border-primary font-mono cursor-pointer flex-1 text-on-surface"
                       required
                     />
                     <button
                       type="submit"
-                      className="btn bg-teal-600 hover:bg-teal-500 text-white font-bold p-2.5 rounded-xl cursor-pointer"
+                      className="btn bg-primary hover:bg-primary-container text-white font-bold p-2.5 rounded-sm cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px] leading-none">add</span>
                     </button>
@@ -1054,38 +1015,38 @@ const Attendance = ({ showToast }) => {
         </div>
       )}
 
-      {/* Detail view Modal */}
+      {/* Detail view Modal Overlay */}
       {selectedRecord && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-[480px] overflow-hidden shadow-2xl animate-scale-up">
-            <div className="px-6 py-5 bg-slate-950/50 border-b border-slate-800 flex items-center justify-between">
-              <h4 className="font-extrabold text-sm text-teal-400 uppercase tracking-widest flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-teal-400">badge</span>
+        <div className="fixed inset-0 bg-[#0b1c30]/50 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface-lowest border border-outline-variant rounded-lg w-full max-w-[480px] overflow-hidden shadow-xl animate-scale-up">
+            <div className="px-6 py-4 bg-surface-low border-b border-outline-variant flex items-center justify-between">
+              <h4 className="font-extrabold text-sm text-primary uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary">badge</span>
                 Attendance Log Details
               </h4>
-              <button onClick={() => setSelectedRecord(null)} className="w-[30px] h-[30px] rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-400 cursor-pointer">
+              <button onClick={() => setSelectedRecord(null)} className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant cursor-pointer">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-4.5 text-xs text-slate-300 font-semibold">
-              <div className="flex items-center gap-3 p-3 bg-slate-950 border border-slate-800 rounded-xl">
-                <div className="w-10 h-10 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center font-bold text-teal-400 text-base">
+            <div className="p-6 flex flex-col gap-4 text-xs text-on-surface font-semibold">
+              <div className="flex items-center gap-3 p-3 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center font-bold text-primary text-base">
                   {(selectedRecord.employeeName || selectedRecord.worker?.name || 'S').charAt(0)}
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-white">{selectedRecord.employeeName || selectedRecord.worker?.name}</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{selectedRecord.role || 'Staff'} · {selectedRecord.department}</p>
+                  <h4 className="font-bold text-sm text-on-surface">{selectedRecord.employeeName || selectedRecord.worker?.name}</h4>
+                  <p className="text-[11px] text-outline mt-0.5">{selectedRecord.role || 'Staff'} · {selectedRecord.department}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-t border-slate-800 pt-4">
+              <div className="grid grid-cols-2 gap-4 border-t border-outline-variant pt-4">
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-slate-500">Log Date</p>
-                  <p className="text-white mt-0.5 font-mono">{formatDate(selectedRecord.date)}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-outline">Log Date</p>
+                  <p className="text-on-surface mt-0.5 font-mono font-bold">{formatDate(selectedRecord.date)}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-slate-500">Status Type</p>
+                  <p className="text-[9px] uppercase tracking-wider text-outline">Status Type</p>
                   <p className="mt-0.5">
                     <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${getStatusBadgeClass(selectedRecord.status)}`}>
                       {selectedRecord.status}
@@ -1093,38 +1054,38 @@ const Attendance = ({ showToast }) => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-slate-500">Shift Check-In</p>
-                  <p className="text-white mt-0.5 font-mono">{selectedRecord.checkInTime || '-'}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-outline">Shift Check-In</p>
+                  <p className="text-on-surface mt-0.5 font-mono">{selectedRecord.checkInTime || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-slate-500">Shift Checkout</p>
-                  <p className="text-white mt-0.5 font-mono">{selectedRecord.checkOutTime || '-'}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-outline">Shift Checkout</p>
+                  <p className="text-on-surface mt-0.5 font-mono">{selectedRecord.checkOutTime || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-slate-500">Total Hours</p>
-                  <p className="text-white mt-0.5">{selectedRecord.workingHours ? `${selectedRecord.workingHours} hrs` : '-'}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-outline">Total Hours</p>
+                  <p className="text-on-surface mt-0.5">{selectedRecord.workingHours ? `${selectedRecord.workingHours} hrs` : '-'}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-slate-500">Assigned Site</p>
-                  <p className="text-white mt-0.5">{selectedRecord.site || 'Pune Head Office'}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-outline">Assigned Site</p>
+                  <p className="text-on-surface mt-0.5">{selectedRecord.site || 'Pune Head Office'}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-[9px] uppercase tracking-wider text-slate-500">GPS Address Logged</p>
-                  <p className="text-slate-300 mt-1 leading-relaxed bg-slate-950 p-2.5 border border-slate-800 rounded-lg">
+                  <p className="text-[9px] uppercase tracking-wider text-outline">GPS Address Logged</p>
+                  <p className="text-on-surface-variant mt-1 leading-relaxed bg-surface-low p-2.5 border border-outline-variant rounded-sm">
                     {selectedRecord.address || 'No GPS coordinates logs available for manual entry.'}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-[9px] uppercase tracking-wider text-slate-500">Client Metadata</p>
-                  <p className="text-slate-400 mt-1 font-mono text-[10px]">
+                  <p className="text-[9px] uppercase tracking-wider text-outline">Client Metadata</p>
+                  <p className="text-outline mt-1 font-mono text-[10px]">
                     IP Address: {selectedRecord.ipAddress || 'N/A'} · Device: {selectedRecord.device || 'N/A'}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-slate-950/40 border-t border-slate-800 flex justify-end">
-              <button onClick={() => setSelectedRecord(null)} className="px-4 py-2 border border-slate-800 rounded-xl hover:bg-slate-800 cursor-pointer text-xs font-bold transition-all">
+            <div className="px-6 py-3 bg-surface-low border-t border-outline-variant flex justify-end">
+              <button onClick={() => setSelectedRecord(null)} className="px-4 py-2 border border-outline-variant rounded-sm hover:bg-surface-container cursor-pointer text-xs font-bold transition-all text-on-surface">
                 Close details
               </button>
             </div>
@@ -1132,14 +1093,14 @@ const Attendance = ({ showToast }) => {
         </div>
       )}
 
-      {/* HR Detailed Profile View */}
+      {/* HR Detailed Profile View Overlay */}
       {selectedWorkerForProfile && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-[780px] max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col animate-scale-up">
+        <div className="fixed inset-0 bg-[#0b1c30]/50 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface-lowest border border-outline-variant rounded-lg w-full max-w-[780px] max-h-[90vh] overflow-y-auto shadow-xl flex flex-col animate-scale-up text-on-surface">
             
-            <div className="px-6 py-5 bg-slate-950/50 border-b border-slate-800 flex items-center justify-between sticky top-0 bg-slate-900 z-[10]">
-              <h4 className="font-extrabold text-sm text-teal-400 uppercase tracking-widest">Employee HR Performance Sheet</h4>
-              <button onClick={() => setSelectedWorkerForProfile(null)} className="w-[30px] h-[30px] rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-400 cursor-pointer">
+            <div className="px-6 py-4 bg-surface-low border-b border-outline-variant flex items-center justify-between sticky top-0 z-[10]">
+              <h4 className="font-extrabold text-sm text-primary uppercase tracking-wider">Employee HR Performance Sheet</h4>
+              <button onClick={() => setSelectedWorkerForProfile(null)} className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant cursor-pointer">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
@@ -1147,24 +1108,24 @@ const Attendance = ({ showToast }) => {
             <div className="p-6 flex flex-col gap-6">
               
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
-                <div className="md:col-span-5 bg-slate-950/60 p-5 rounded-2xl border border-slate-800 flex flex-col items-center justify-center gap-4 text-center">
-                  <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center font-bold text-teal-400 text-lg">
+                <div className="md:col-span-5 bg-surface-low p-5 rounded-md border border-outline-variant flex flex-col items-center justify-center gap-4 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center font-bold text-primary text-lg">
                     {selectedWorkerForProfile.name.charAt(0)}
                   </div>
                   <div>
-                    <h3 className="text-base font-extrabold text-white">{selectedWorkerForProfile.name}</h3>
-                    <p className="text-[10px] text-teal-300 font-bold uppercase tracking-wider mt-1">{selectedWorkerForProfile.role}</p>
-                    <p className="text-[10px] text-slate-500 mt-2 font-mono bg-slate-900 border border-slate-800 px-2 py-0.5 rounded select-all">
+                    <h3 className="text-base font-extrabold text-on-surface">{selectedWorkerForProfile.name}</h3>
+                    <p className="text-[11px] text-primary font-bold uppercase tracking-wider mt-1">{selectedWorkerForProfile.role}</p>
+                    <p className="text-[10px] text-outline mt-2 font-mono bg-surface-lowest border border-outline-variant px-2 py-0.5 rounded select-all">
                       {selectedWorkerForProfile.employeeId || 'No ID Record'}
                     </p>
                   </div>
                 </div>
 
                 <div className="md:col-span-7 grid grid-cols-2 gap-4 text-xs font-semibold">
-                  <div className="col-span-2 bg-teal-950/20 border border-teal-900/30 rounded-xl p-4">
-                    <span className="text-[9px] font-bold text-teal-400 uppercase tracking-widest">Presence Percentage</span>
+                  <div className="col-span-2 bg-primary/10 border border-primary/20 rounded-md p-4">
+                    <span className="text-[9px] font-bold text-primary uppercase tracking-wider">Presence Percentage</span>
                     <div className="flex items-end justify-between mt-2.5">
-                      <div className="text-3xl font-black text-teal-400 leading-none">
+                      <div className="text-3xl font-black text-primary leading-none">
                         {(() => {
                           const wPresentCount = workerHistory.filter(h => h.status === 'Present' || h.status === 'Late').length;
                           const wAbsentCount = workerHistory.filter(h => h.status === 'Absent').length;
@@ -1173,20 +1134,20 @@ const Attendance = ({ showToast }) => {
                           return wTotal > 0 ? Math.round((wPresentCount / wTotal) * 100) : 0;
                         })()}%
                       </div>
-                      <span className="text-[10px] text-slate-500 font-bold uppercase">Based on logged logs</span>
+                      <span className="text-[10px] text-outline font-bold uppercase">Based on logged logs</span>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/30 border border-slate-800 rounded-xl p-4">
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Present (On-Time)</span>
-                    <div className="text-2xl font-black text-teal-400 mt-2 leading-none">
+                  <div className="bg-surface-low border border-outline-variant rounded-md p-4">
+                    <span className="text-[9px] font-bold text-outline uppercase tracking-wider">Present (On-Time)</span>
+                    <div className="text-2xl font-black text-primary mt-2 leading-none">
                       {workerHistory.filter(h => h.status === 'Present').length}
                     </div>
                   </div>
 
-                  <div className="bg-slate-950/30 border border-slate-800 rounded-xl p-4">
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Late Logs</span>
-                    <div className="text-2xl font-black text-amber-400 mt-2 leading-none">
+                  <div className="bg-surface-low border border-outline-variant rounded-md p-4">
+                    <span className="text-[9px] font-bold text-outline uppercase tracking-wider">Late Logs</span>
+                    <div className="text-2xl font-black text-amber-600 mt-2 leading-none">
                       {workerHistory.filter(h => h.status === 'Late').length}
                     </div>
                   </div>
@@ -1194,28 +1155,28 @@ const Attendance = ({ showToast }) => {
               </div>
 
               {/* Timeline Table */}
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+              <div className="bg-surface-lowest border border-outline-variant rounded-md overflow-hidden flex flex-col">
                 {workerHistoryLoading ? (
                   <div className="p-10 text-center flex flex-col items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-400"></div>
-                    <p className="text-[10px] text-slate-500 font-bold">Syncing HR DB records...</p>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                    <p className="text-[10px] text-outline font-bold">Syncing HR DB records...</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto max-h-[220px] overflow-y-auto scrollbar-thin">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="bg-slate-900 border-b border-slate-800 sticky top-0 z-[5]">
-                          <th className="p-3 text-[9px] font-bold text-slate-500 uppercase bg-slate-900">Date</th>
-                          <th className="p-3 text-[9px] font-bold text-slate-500 uppercase bg-slate-900">Status</th>
-                          <th className="p-3 text-[9px] font-bold text-slate-500 uppercase bg-slate-900">Timing (In/Out)</th>
-                          <th className="p-3 text-[9px] font-bold text-slate-500 uppercase bg-slate-900">Hours</th>
-                          <th className="p-3 text-[9px] font-bold text-slate-500 uppercase bg-slate-900">Site Location</th>
+                        <tr className="bg-surface-low border-b border-outline-variant sticky top-0 z-[5]">
+                          <th className="p-3 text-[9px] font-bold text-outline uppercase">Date</th>
+                          <th className="p-3 text-[9px] font-bold text-outline uppercase">Status</th>
+                          <th className="p-3 text-[9px] font-bold text-outline uppercase">Timing (In/Out)</th>
+                          <th className="p-3 text-[9px] font-bold text-outline uppercase">Hours</th>
+                          <th className="p-3 text-[9px] font-bold text-outline uppercase">Site Location</th>
                         </tr>
                       </thead>
                       <tbody>
                         {workerHistory.map(h => (
-                          <tr key={h._id} className="border-b border-slate-800/40 hover:bg-slate-900/50">
-                            <td className="p-3 font-bold text-slate-300">
+                          <tr key={h._id} className="border-b border-outline-variant/30 hover:bg-surface-low/50">
+                            <td className="p-3 font-bold text-on-surface">
                               {formatDate(h.date)}
                             </td>
                             <td className="p-3">
@@ -1226,15 +1187,15 @@ const Attendance = ({ showToast }) => {
                             <td className="p-3 font-mono font-semibold text-[10px]">
                               {h.checkInTime || '-'} / {h.checkOutTime || '-'}
                             </td>
-                            <td className="p-3 font-semibold text-slate-300">
+                            <td className="p-3 font-semibold text-on-surface">
                               {h.workingHours ? `${h.workingHours} hrs` : '-'}
                             </td>
-                            <td className="p-3 text-slate-400 font-semibold">{h.site || 'Pune'}</td>
+                            <td className="p-3 text-outline font-semibold">{h.site || 'Pune'}</td>
                           </tr>
                         ))}
                         {workerHistory.length === 0 && (
                           <tr>
-                            <td colSpan="5" className="p-8 text-center text-slate-500 font-bold italic">
+                            <td colSpan="5" className="p-8 text-center text-outline font-bold italic">
                               No log history on database.
                             </td>
                           </tr>
@@ -1246,8 +1207,8 @@ const Attendance = ({ showToast }) => {
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-slate-950/40 border-t border-slate-800 flex justify-end sticky bottom-0 z-[10]">
-              <button onClick={() => setSelectedWorkerForProfile(null)} className="px-4 py-2 border border-slate-800 rounded-xl hover:bg-slate-800 cursor-pointer text-xs font-bold">
+            <div className="px-6 py-3 bg-surface-low border-t border-outline-variant flex justify-end sticky bottom-0 z-[10]">
+              <button onClick={() => setSelectedWorkerForProfile(null)} className="px-4 py-2 border border-outline-variant rounded-sm hover:bg-surface-container cursor-pointer text-xs font-bold text-on-surface">
                 Close HR Sheet
               </button>
             </div>
@@ -1255,27 +1216,27 @@ const Attendance = ({ showToast }) => {
         </div>
       )}
 
-      {/* Manual Check-in Modal (Corrections / Approvals) */}
+      {/* Manual Check-in Modal */}
       {showManualModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-[500px] overflow-hidden shadow-2xl animate-scale-up">
-            <div className="px-6 py-5 bg-slate-950/50 border-b border-slate-800 flex items-center justify-between">
-              <h4 className="font-extrabold text-sm text-teal-400 uppercase tracking-widest flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-teal-400">bookmark_added</span>
+        <div className="fixed inset-0 bg-[#0b1c30]/50 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface-lowest border border-outline-variant rounded-lg w-full max-w-[500px] overflow-hidden shadow-xl animate-scale-up text-on-surface">
+            <div className="px-6 py-4 bg-surface-low border-b border-outline-variant flex items-center justify-between">
+              <h4 className="font-extrabold text-sm text-primary uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary">bookmark_added</span>
                 Manual Shift Entry
               </h4>
-              <button onClick={() => setShowManualModal(false)} className="w-[30px] h-[30px] rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-400 cursor-pointer">
+              <button onClick={() => setShowManualModal(false)} className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant cursor-pointer">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <form onSubmit={handleAddManualLog} className="p-6 flex flex-col gap-4 text-xs font-bold text-slate-300">
+            <form onSubmit={handleAddManualLog} className="p-6 flex flex-col gap-4 text-xs font-bold text-on-surface-variant">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[9px] uppercase tracking-widest text-slate-500">Select Employee</label>
+                <label className="text-[9px] uppercase tracking-wider text-outline">Select Employee</label>
                 <select
                   value={manualWorker}
                   onChange={(e) => setManualWorker(e.target.value)}
-                  className="p-3 bg-slate-950 border border-slate-800 rounded-xl outline-none focus:border-teal-500 font-bold cursor-pointer"
+                  className="p-3 bg-surface-low border border-outline-variant rounded-sm outline-none focus:border-primary font-bold cursor-pointer text-on-surface"
                   required
                 >
                   <option value="">Choose worker from registry...</option>
@@ -1287,21 +1248,21 @@ const Attendance = ({ showToast }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] uppercase tracking-widest text-slate-500">Log Date</label>
+                  <label className="text-[9px] uppercase tracking-wider text-outline">Log Date</label>
                   <input
                     type="date"
                     value={manualDate}
                     onChange={(e) => setManualDate(e.target.value)}
-                    className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none focus:border-teal-500 font-mono cursor-pointer"
+                    className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none focus:border-primary font-mono cursor-pointer text-on-surface"
                     required
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] uppercase tracking-widest text-slate-500">Attendance Status</label>
+                  <label className="text-[9px] uppercase tracking-wider text-outline">Attendance Status</label>
                   <select
                     value={manualStatus}
                     onChange={(e) => setManualStatus(e.target.value)}
-                    className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none focus:border-teal-500 cursor-pointer"
+                    className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none focus:border-primary cursor-pointer text-on-surface"
                   >
                     <option value="Present">Present (On-Time)</option>
                     <option value="Late">Late Check-In</option>
@@ -1314,33 +1275,33 @@ const Attendance = ({ showToast }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] uppercase tracking-widest text-slate-500">Check-In Time</label>
+                  <label className="text-[9px] uppercase tracking-wider text-outline">Check-In Time</label>
                   <input
                     type="text"
                     value={manualCheckIn}
                     onChange={(e) => setManualCheckIn(e.target.value)}
-                    className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none font-mono text-center focus:border-teal-500"
+                    className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none font-mono text-center focus:border-primary text-on-surface"
                     placeholder="e.g. 09:00 AM"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] uppercase tracking-widest text-slate-500">Check-Out Time</label>
+                  <label className="text-[9px] uppercase tracking-wider text-outline">Check-Out Time</label>
                   <input
                     type="text"
                     value={manualCheckOut}
                     onChange={(e) => setManualCheckOut(e.target.value)}
-                    className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none font-mono text-center focus:border-teal-500"
+                    className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none font-mono text-center focus:border-primary text-on-surface"
                     placeholder="e.g. 06:00 PM"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[9px] uppercase tracking-widest text-slate-500">Assigned Site / Plant</label>
+                <label className="text-[9px] uppercase tracking-wider text-outline">Assigned Site / Plant</label>
                 <select
                   value={manualSite}
                   onChange={(e) => setManualSite(e.target.value)}
-                  className="p-3 bg-slate-950 border border-slate-800 rounded-xl outline-none focus:border-teal-500 cursor-pointer"
+                  className="p-3 bg-surface-low border border-outline-variant rounded-sm outline-none focus:border-primary cursor-pointer text-on-surface"
                 >
                   <option value="Pune Head Office">Pune Head Office</option>
                   <option value="Mumbai Assembly Plant">Mumbai Assembly Plant</option>
@@ -1349,19 +1310,19 @@ const Attendance = ({ showToast }) => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[9px] uppercase tracking-widest text-slate-500">Remarks / Approval Reason</label>
+                <label className="text-[9px] uppercase tracking-wider text-outline">Remarks / Approval Reason</label>
                 <textarea
                   value={manualRemarks}
                   onChange={(e) => setManualRemarks(e.target.value)}
                   placeholder="Reason for manual check-in correction..."
-                  className="p-3 bg-slate-950 border border-slate-800 rounded-xl outline-none resize-none h-20 focus:border-teal-500 font-medium"
+                  className="p-3 bg-surface-low border border-outline-variant rounded-sm outline-none resize-none h-20 focus:border-primary font-medium text-on-surface"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="btn bg-teal-600 hover:bg-teal-500 text-white font-black py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all mt-2 w-full flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                className="btn bg-primary hover:bg-primary-container text-white font-black py-3 px-4 rounded-sm text-xs uppercase tracking-wider transition-all mt-2 w-full flex items-center justify-center gap-2 shadow-sm cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">verified</span>
                 Approve Shift Correction
@@ -1373,11 +1334,11 @@ const Attendance = ({ showToast }) => {
 
       {/* Edit Log Modal */}
       {showEditModal && editRecord && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-[460px] overflow-hidden shadow-2xl animate-scale-up">
-            <div className="px-6 py-5 bg-slate-950/50 border-b border-slate-800 flex items-center justify-between">
-              <h4 className="font-extrabold text-sm text-teal-400 uppercase tracking-widest">Edit Attendance Log</h4>
-              <button onClick={() => setShowEditModal(false)} className="w-[30px] h-[30px] rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-400 cursor-pointer">
+        <div className="fixed inset-0 bg-[#0b1c30]/50 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface-lowest border border-outline-variant rounded-lg w-full max-w-[460px] overflow-hidden shadow-xl animate-scale-up text-on-surface">
+            <div className="px-6 py-4 bg-surface-low border-b border-outline-variant flex items-center justify-between">
+              <h4 className="font-extrabold text-sm text-primary uppercase tracking-wider">Edit Attendance Log</h4>
+              <button onClick={() => setShowEditModal(false)} className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant cursor-pointer">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
@@ -1414,20 +1375,20 @@ const Attendance = ({ showToast }) => {
                   setLoading(false);
                 }
               }}
-              className="p-6 flex flex-col gap-4 text-xs font-bold text-slate-300"
+              className="p-6 flex flex-col gap-4 text-xs font-bold text-on-surface-variant"
             >
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center gap-2">
-                <span className="material-symbols-outlined text-teal-400">person</span>
-                <span className="text-white">{editRecord.employeeName || editRecord.worker?.name}</span>
+              <div className="p-3 bg-surface-low border border-outline-variant rounded-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">person</span>
+                <span className="text-on-surface">{editRecord.employeeName || editRecord.worker?.name}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] uppercase tracking-widest text-slate-500">Status</label>
+                  <label className="text-[9px] uppercase tracking-wider text-outline">Status</label>
                   <select
                     value={editRecord.status}
                     onChange={(e) => setEditRecord({ ...editRecord, status: e.target.value })}
-                    className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none cursor-pointer"
+                    className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none cursor-pointer text-on-surface"
                   >
                     <option value="Present">Present</option>
                     <option value="Late">Late</option>
@@ -1437,44 +1398,44 @@ const Attendance = ({ showToast }) => {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] uppercase tracking-widest text-slate-500">Working Hours</label>
+                  <label className="text-[9px] uppercase tracking-wider text-outline">Working Hours</label>
                   <input
                     type="number"
                     step="0.1"
                     value={editRecord.workingHours || 0}
                     onChange={(e) => setEditRecord({ ...editRecord, workingHours: e.target.value })}
-                    className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none font-mono text-center"
+                    className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none font-mono text-center text-on-surface"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] uppercase tracking-widest text-slate-500">Check-In</label>
+                  <label className="text-[9px] uppercase tracking-wider text-outline">Check-In</label>
                   <input
                     type="text"
                     value={editRecord.checkInTime || '-'}
                     onChange={(e) => setEditRecord({ ...editRecord, checkInTime: e.target.value })}
-                    className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none font-mono text-center"
+                    className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none font-mono text-center text-on-surface"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] uppercase tracking-widest text-slate-500">Check-Out</label>
+                  <label className="text-[9px] uppercase tracking-wider text-outline">Check-Out</label>
                   <input
                     type="text"
                     value={editRecord.checkOutTime || '-'}
                     onChange={(e) => setEditRecord({ ...editRecord, checkOutTime: e.target.value })}
-                    className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl outline-none font-mono text-center"
+                    className="p-2.5 bg-surface-low border border-outline-variant rounded-sm outline-none font-mono text-center text-on-surface"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[9px] uppercase tracking-widest text-slate-500">Site Location</label>
+                <label className="text-[9px] uppercase tracking-wider text-outline">Site Location</label>
                 <select
                   value={editRecord.site}
                   onChange={(e) => setEditRecord({ ...editRecord, site: e.target.value })}
-                  className="p-3 bg-slate-950 border border-slate-800 rounded-xl outline-none cursor-pointer"
+                  className="p-3 bg-surface-low border border-outline-variant rounded-sm outline-none cursor-pointer text-on-surface"
                 >
                   <option value="Pune Head Office">Pune Head Office</option>
                   <option value="Mumbai Assembly Plant">Mumbai Assembly Plant</option>
@@ -1485,7 +1446,7 @@ const Attendance = ({ showToast }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn bg-teal-600 hover:bg-teal-500 text-white font-black py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all mt-2 w-full shadow-md cursor-pointer"
+                className="btn bg-primary hover:bg-primary-container text-white font-black py-3 px-4 rounded-sm text-xs uppercase tracking-wider transition-all mt-2 w-full shadow-sm cursor-pointer"
               >
                 Save Attendance Modifications
               </button>
