@@ -53,6 +53,24 @@ export const api = {
     return res.json();
   },
 
+  forgotPassword: async (email) => {
+    const res = await fetch(`${API_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    return res.json();
+  },
+
+  resetPassword: async (resetData) => {
+    const res = await fetch(`${API_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(resetData)
+    });
+    return res.json();
+  },
+
   getMe: async () => {
     const res = await authFetch(`${API_URL}/auth/me`);
     return res.json();
@@ -386,7 +404,35 @@ export const api = {
   },
 
   calculateSalary: async (workerId, month) => {
-    const res = await authFetch(`${API_URL}/salary/calculate?worker=${workerId}&month=${month}`);
+    const res = await authFetch(`${API_URL}/salary/calculate?worker=${workerId}&month=${encodeURIComponent(month || '')}`);
+    return res.json();
+  },
+
+  setMonthlySalary: async (workerId, salary, month) => {
+    const res = await authFetch(`${API_URL}/salary/set-monthly-salary`, {
+      method: 'POST',
+      body: JSON.stringify({ workerId, salary, month })
+    });
+    return res.json();
+  },
+
+  approveOvertime: async (overtimeData) => {
+    const res = await authFetch(`${API_URL}/salary/overtime`, {
+      method: 'POST',
+      body: JSON.stringify(overtimeData)
+    });
+    return res.json();
+  },
+
+  getOvertimeHistory: async (workerId) => {
+    const query = workerId ? `?worker=${workerId}` : '';
+    const res = await authFetch(`${API_URL}/salary/overtime${query}`);
+    return res.json();
+  },
+
+  getSalaryHistory: async (workerId) => {
+    const query = workerId ? `?worker=${workerId}` : '';
+    const res = await authFetch(`${API_URL}/salary/history${query}`);
     return res.json();
   },
 
@@ -496,4 +542,3 @@ export const api = {
     return res.json();
   }
 };
-

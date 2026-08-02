@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
+import UserAvatar from './UserAvatar';
 
 const WorkerTopNav = ({ user, setMobileOpen, onLogout, notificationsCount = 0, showToast, onBellClick }) => {
   const navigate = useNavigate();
@@ -77,46 +78,40 @@ const WorkerTopNav = ({ user, setMobileOpen, onLogout, notificationsCount = 0, s
       case '/worker/notifications':
         return 'Notifications & Alerts';
       default:
-        return 'Smart Ops Dashboard';
+        return 'Worker Console';
     }
   };
 
   const title = getPageTitle();
-  const workerName = user?.worker?.name || user?.name || user?.username || 'Suresh Kumar';
-  const designation = user?.worker?.designation || user?.department || 'Senior CNC Machinist';
-  const initials = workerName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .substring(0, 2)
-    .toUpperCase() || 'US';
+  const workerName = user?.worker?.name || user?.name || user?.username || 'User';
+  const designation = user?.worker?.designation || user?.department || 'Staff';
 
   return (
-    <header className="sticky top-0 z-40 bg-surface text-on-surface border-b border-outline-variant/40 px-4 md:px-8 py-3 flex items-center justify-between gap-4 shadow-sm">
+    <header className="sticky top-0 z-50 h-[64px] bg-surface text-on-surface border-b border-outline-variant flex items-center justify-between px-6 gap-4">
       {/* Mobile Toggle & Header Title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <button
           onClick={() => setMobileOpen(true)}
-          className="lg:hidden p-2 rounded-md hover:bg-surface-container text-on-surface transition-all cursor-pointer"
+          className="w-[38px] h-[38px] flex items-center justify-center rounded-full hover:bg-surface-low text-on-surface-variant transition-colors duration-150 lg:hidden"
         >
           <span className="material-symbols-outlined">menu</span>
         </button>
-        <h2 className="text-sm md:text-base font-bold text-on-surface tracking-tight">{title}</h2>
+        <div>
+          <h1 className="text-xl font-extrabold text-on-surface tracking-tight leading-tight">{title}</h1>
+          <p className="text-[12px] text-outline">Console / Worker</p>
+        </div>
       </div>
 
-
       {/* Middle Search Input Bar */}
-      <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
-        <div className="relative w-full">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">
-            search
-          </span>
-          <input
-            type="text"
-            placeholder="Search tasks, logs..."
-            className="w-full pl-10 pr-4 py-2 bg-surface-low border border-outline-variant rounded-lg text-xs text-on-surface placeholder-outline outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
-          />
-        </div>
+      <div className="relative flex-1 max-w-[360px] hidden md:block">
+        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">
+          search
+        </span>
+        <input
+          type="text"
+          placeholder="Search tasks, logs..."
+          className="w-full h-[38px] pl-10 pr-4 bg-surface-low border border-outline-variant rounded-sm text-[13px] text-on-surface outline-none focus:border-primary focus:ring-3 focus:ring-primary/10 transition-all duration-150"
+        />
       </div>
 
       {/* Right User Controls */}
@@ -136,32 +131,34 @@ const WorkerTopNav = ({ user, setMobileOpen, onLogout, notificationsCount = 0, s
         {/* Notification Bell */}
         <button
           onClick={onBellClick || (() => navigate('/worker/notifications'))}
-          className="relative p-2 rounded-lg bg-surface-low border border-outline-variant text-outline hover:text-on-surface hover:border-primary transition-all cursor-pointer"
+          className="relative p-2 rounded-full hover:bg-surface-low text-on-surface-variant transition-colors duration-150 cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[20px]">notifications</span>
+          <span className="material-symbols-outlined text-[22px]">notifications</span>
           {notificationsCount > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+            <span className="absolute top-1 right-1 bg-error text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              {notificationsCount > 99 ? '99+' : notificationsCount}
+            </span>
           )}
         </button>
 
         {/* User Profile Pill */}
         <div className="relative">
-          <button
+          <div
             onClick={() => setProfileDropdown(!profileDropdown)}
-            className="flex items-center gap-2.5 p-1.5 rounded-lg bg-surface-low border border-outline-variant hover:border-primary transition-all cursor-pointer"
+            className="flex items-center gap-2.5 cursor-pointer"
           >
-            <div className="w-7 h-7 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs shadow-sm">
-              {initials}
+            <div className="text-right hidden sm:block">
+              <p className="text-xs font-semibold text-on-surface leading-tight">{workerName}</p>
+              <span className="text-[10px] text-outline uppercase tracking-wider">{designation}</span>
             </div>
-            <div className="hidden sm:flex flex-col text-left">
-              <span className="text-xs font-bold text-on-surface line-clamp-1">{workerName}</span>
-              <span className="text-[9px] text-primary font-semibold line-clamp-1">{designation}</span>
-            </div>
-            <span className="material-symbols-outlined text-[16px] text-outline">expand_more</span>
-          </button>
+            <UserAvatar
+              user={user}
+              className="w-9 h-9 rounded-full object-cover border border-outline-variant text-[14px] flex-shrink-0 overflow-hidden"
+            />
+          </div>
 
           {profileDropdown && (
-            <div className="absolute right-0 mt-2 w-52 bg-surface text-on-surface rounded-lg shadow-xl border border-outline-variant py-2 z-50 animate-scale-up">
+            <div className="absolute right-0 mt-2 w-52 bg-surface-lowest text-on-surface rounded-lg shadow-xl border border-outline-variant py-2 z-50 animate-scale-up">
               <div className="px-4 py-2 border-b border-outline-variant/40">
                 <p className="text-xs font-bold text-on-surface">{workerName}</p>
                 <p className="text-[10px] text-outline">{user?.email || `${user?.username || 'worker'}@factory.com`}</p>
@@ -171,7 +168,7 @@ const WorkerTopNav = ({ user, setMobileOpen, onLogout, notificationsCount = 0, s
                   setProfileDropdown(false);
                   navigate('/worker/profile');
                 }}
-                className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-on-surface hover:bg-surface-container transition-all text-left"
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-low transition-all text-left cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px] text-outline">person</span>
                 Profile Settings
@@ -189,15 +186,6 @@ const WorkerTopNav = ({ user, setMobileOpen, onLogout, notificationsCount = 0, s
             </div>
           )}
         </div>
-
-        {/* Logout Action Button */}
-        <button
-          onClick={onLogout}
-          className="p-2 rounded-lg bg-surface-low border border-outline-variant text-outline hover:text-error hover:border-error/40 transition-all cursor-pointer"
-          title="Logout"
-        >
-          <span className="material-symbols-outlined text-[20px]">logout</span>
-        </button>
       </div>
     </header>
   );

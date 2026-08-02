@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+
 const WorkerTasks = ({ showToast }) => {
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -117,7 +118,7 @@ const WorkerTasks = ({ showToast }) => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 text-on-surface font-sans">
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/40 pb-4">
           <div>
@@ -128,7 +129,7 @@ const WorkerTasks = ({ showToast }) => {
           </div>
           <button
             onClick={fetchMyTasks}
-            className="btn btn-outline border border-outline-variant text-on-surface hover:bg-surface-container font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-2 self-start md:self-auto cursor-pointer"
+            className="btn border border-outline-variant hover:bg-surface-low text-on-surface-variant font-bold px-4 py-2 rounded-sm text-xs flex items-center gap-2 self-start md:self-auto cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">refresh</span>
             Refresh Tasks
@@ -144,25 +145,25 @@ const WorkerTasks = ({ showToast }) => {
             {tasks.map((task) => (
               <div
                 key={task._id}
-                className="bg-surface border border-outline-variant rounded-xl p-5 shadow-sm hover:border-primary/50 transition-all flex flex-col justify-between gap-4 cursor-pointer"
+                className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm hover:border-primary transition-all flex flex-col justify-between gap-4 cursor-pointer"
                 onClick={() => handleOpenTask(task)}
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                       task.priority === 'Urgent' || task.priority === 'Critical' || task.priority === 'High'
-                        ? 'bg-error/10 text-error'
-                        : 'bg-primary/10 text-primary'
+                        ? 'bg-error/10 text-error border border-error/20'
+                        : 'bg-primary/10 text-primary border border-primary/20'
                     }`}>
                       {task.priority || 'Medium'} Priority
                     </span>
 
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
                       task.status === 'Completed' || task.status === 'Submitted for Verification'
-                        ? 'bg-emerald-500/10 text-emerald-600'
+                        ? 'bg-primary/10 text-primary border border-primary/20'
                         : task.status === 'In Progress' || task.status === 'Started'
-                        ? 'bg-amber-500/10 text-amber-600'
-                        : 'bg-surface-container-high text-outline'
+                        ? 'bg-amber-500/10 text-amber-700 border border-amber-500/20'
+                        : 'bg-surface-low text-outline border border-outline-variant'
                     }`}>
                       {task.status}
                     </span>
@@ -177,7 +178,7 @@ const WorkerTasks = ({ showToast }) => {
                     <span className="text-outline font-semibold">Progress</span>
                     <span className="font-extrabold text-primary">{task.progressPercent || task.progress || 0}%</span>
                   </div>
-                  <div className="w-full bg-surface-container-high rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-surface-low border border-outline-variant/60 rounded-full h-2 overflow-hidden">
                     <div
                       className="bg-primary h-full rounded-full transition-all duration-300"
                       style={{ width: `${task.progressPercent || task.progress || 0}%` }}
@@ -196,8 +197,8 @@ const WorkerTasks = ({ showToast }) => {
 
         {/* Task Detail & Update Modal */}
         {selectedTask && (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-surface border border-outline-variant rounded-xl max-w-2xl w-full p-6 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto animate-scale-up">
+          <div className="fixed inset-0 z-50 bg-[#0b1c30]/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-surface-lowest border border-outline-variant rounded-lg max-w-2xl w-full p-6 shadow-xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto animate-scale-up text-on-surface">
               <div className="flex items-start justify-between border-b border-outline-variant/50 pb-3">
                 <div>
                   <h3 className="text-xl font-extrabold text-on-surface">{selectedTask.title || selectedTask.name}</h3>
@@ -205,14 +206,14 @@ const WorkerTasks = ({ showToast }) => {
                 </div>
                 <button
                   onClick={() => setSelectedTask(null)}
-                  className="p-1 rounded hover:bg-surface-container text-outline cursor-pointer"
+                  className="w-7 h-7 rounded hover:bg-surface-low text-on-surface-variant flex items-center justify-center cursor-pointer"
                 >
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
 
               {/* Status and Progress Controls */}
-              <div className="bg-surface-container/40 p-4 rounded-lg border border-outline-variant/40 flex flex-col gap-4">
+              <div className="bg-surface-low p-4 rounded-sm border border-outline-variant flex flex-col gap-4">
                 <h4 className="text-xs font-bold text-outline uppercase tracking-wider">Update Status & Progress</h4>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -221,7 +222,7 @@ const WorkerTasks = ({ showToast }) => {
                     <select
                       value={newStatus}
                       onChange={(e) => setNewStatus(e.target.value)}
-                      className="px-3 py-2 bg-surface border border-outline-variant rounded-md text-xs font-bold text-on-surface outline-none focus:border-primary"
+                      className="px-3 py-2 bg-surface-lowest border border-outline-variant rounded-sm text-xs font-bold text-on-surface outline-none focus:border-primary cursor-pointer"
                     >
                       <option value="Pending">Pending</option>
                       <option value="Started">Started</option>
@@ -247,7 +248,7 @@ const WorkerTasks = ({ showToast }) => {
 
                 <button
                   onClick={handleUpdateStatusAndProgress}
-                  className="bg-primary text-white text-xs font-bold py-2 px-4 rounded-md hover:bg-primary-container transition-all self-end cursor-pointer"
+                  className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold py-2 px-4 rounded-sm shadow-sm uppercase tracking-wider self-end cursor-pointer"
                 >
                   Save Status & Progress
                 </button>
@@ -261,7 +262,7 @@ const WorkerTasks = ({ showToast }) => {
                     {selectedTask.checklist.map((item) => (
                       <label
                         key={item._id}
-                        className="flex items-center gap-3 p-3 bg-surface-container/30 border border-outline-variant/30 rounded-lg cursor-pointer hover:bg-surface-container/60 transition-all"
+                        className="flex items-center gap-3 p-3 bg-surface-low border border-outline-variant rounded-sm cursor-pointer hover:bg-surface-low/80 transition-all"
                       >
                         <input
                           type="checkbox"
@@ -289,7 +290,7 @@ const WorkerTasks = ({ showToast }) => {
                     placeholder="e.g. Completed assembly of rack unit A12"
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
-                    className="px-3 py-2 bg-surface border border-outline-variant rounded-md text-xs font-medium text-on-surface outline-none focus:border-primary"
+                    className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary"
                   />
                 </div>
 
@@ -300,7 +301,7 @@ const WorkerTasks = ({ showToast }) => {
                     placeholder="Describe specific steps, components used, or tests performed"
                     value={workPerformed}
                     onChange={(e) => setWorkPerformed(e.target.value)}
-                    className="px-3 py-2 bg-surface border border-outline-variant rounded-md text-xs font-medium text-on-surface outline-none focus:border-primary"
+                    className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary resize-none"
                   ></textarea>
                 </div>
 
@@ -311,14 +312,14 @@ const WorkerTasks = ({ showToast }) => {
                     placeholder="e.g. Minor component shortage resolved"
                     value={issuesFaced}
                     onChange={(e) => setIssuesFaced(e.target.value)}
-                    className="px-3 py-2 bg-surface border border-outline-variant rounded-md text-xs font-medium text-on-surface outline-none focus:border-primary"
+                    className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={submittingNotes}
-                  className="bg-emerald-600 text-white font-bold text-xs py-2.5 px-4 rounded-md hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mt-1 cursor-pointer disabled:opacity-50"
+                  className="btn bg-primary hover:bg-primary-container text-white font-bold text-xs py-2.5 px-4 rounded-sm shadow-sm uppercase tracking-wider flex items-center justify-center gap-2 mt-1 cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">send</span>
                   {submittingNotes ? 'Submitting...' : 'Submit Notes for Verification'}
@@ -330,6 +331,5 @@ const WorkerTasks = ({ showToast }) => {
     </div>
   );
 };
-
 
 export default WorkerTasks;

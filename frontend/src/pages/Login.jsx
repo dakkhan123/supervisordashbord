@@ -9,6 +9,15 @@ const Login = ({ showToast, onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Forgot Password State (ONLY for Supervisors)
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
+  const [resetStep, setResetStep] = useState(1); // 1: Email Request, 2: OTP & New Password
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetOTP, setResetOTP] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [generatedOTP, setGeneratedOTP] = useState('');
+
   useEffect(() => {
     const token = localStorage.getItem('smartops_token');
     const userStr = localStorage.getItem('smartops_user');
@@ -71,6 +80,75 @@ const Login = ({ showToast, onLoginSuccess }) => {
       showToast(err.message || 'Failed to connect to authentication server', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Step 1: Request Password Reset OTP (Supervisor Only)
+  const handleRequestOTP = async (e) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      showToast('Please enter your registered email address.', 'error');
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+      const res = await api.forgotPassword(resetEmail.trim());
+      if (res.success) {
+        showToast(res.message || 'OTP sent to your registered email address.', 'success');
+        if (res.otp) {
+          setGeneratedOTP(res.otp);
+          setResetOTP(res.otp); // Pre-fill for quick testing ease
+        }
+        setResetStep(2);
+      } else {
+        showToast(res.error || 'Failed to process password reset request.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error connecting to authentication server.', 'error');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  // Step 2: Confirm OTP & Set New Password
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!resetOTP.trim() || !newPassword.trim()) {
+      showToast('Please enter the OTP code and your new password.', 'error');
+      return;
+    }
+
+    if (newPassword.trim().length < 6) {
+      showToast('New password must be at least 6 characters long.', 'error');
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+      const res = await api.resetPassword({
+        email: resetEmail.trim(),
+        otp: resetOTP.trim(),
+        newPassword: newPassword.trim()
+      });
+
+      if (res.success) {
+        showToast(res.message || 'Password updated successfully! Please sign in.', 'success');
+        setForgotModalOpen(false);
+        setResetStep(1);
+        setResetEmail('');
+        setResetOTP('');
+        setNewPassword('');
+        setGeneratedOTP('');
+      } else {
+        showToast(res.error || 'Failed to reset password.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error resetting password.', 'error');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -170,7 +248,24 @@ const Login = ({ showToast, onLoginSuccess }) => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Password</label>
+                
+                {/* Forgot Password Link - ONLY visible on Supervisor Login page */}
+                {roleMode === 'supervisor' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotModalOpen(true);
+                      setResetStep(1);
+                    }}
+                    className="text-[11px] text-primary hover:underline font-extrabold cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
+
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">lock</span>
                 <input
@@ -220,10 +315,117 @@ const Login = ({ showToast, onLoginSuccess }) => {
           )}
         </div>
       </div>
+
+      {/* Forgot Password Modal (Supervisor Only) */}
+      {forgotModalOpen && (
+        <div className="fixed inset-0 z-50 bg-[#0b1c30]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-lowest border border-outline-variant rounded-md max-w-md w-full p-6 shadow-xl flex flex-col gap-5 text-on-surface animate-scale-up">
+            <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">lock_reset</span>
+                <h3 className="text-base font-extrabold text-on-surface">Supervisor Password Reset</h3>
+              </div>
+              <button
+                onClick={() => setForgotModalOpen(false)}
+                className="text-outline hover:text-on-surface cursor-pointer p-1 rounded hover:bg-surface-low"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {resetStep === 1 ? (
+              /* Step 1: Request Email */
+              <form onSubmit={handleRequestOTP} className="flex flex-col gap-4">
+                <p className="text-xs text-outline font-medium">
+                  Enter your registered supervisor email address to receive a password reset OTP code.
+                </p>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Registered Email</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">mail</span>
+                    <input
+                      type="email"
+                      placeholder="e.g. supervisor@factory.com"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      disabled={resetLoading}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold py-2.5 px-4 rounded-sm shadow-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-1"
+                >
+                  {resetLoading ? 'Generating OTP...' : 'Send Reset OTP Code'}
+                </button>
+              </form>
+            ) : (
+              /* Step 2: Input OTP & New Password */
+              <form onSubmit={handleResetPassword} className="flex flex-col gap-4">
+                <div className="p-3 bg-primary/10 border border-primary/20 rounded-sm text-xs text-primary font-medium">
+                  OTP reset code sent to <strong>{resetEmail}</strong>.
+                  {generatedOTP && (
+                    <span className="block font-mono font-bold mt-1 text-on-surface">
+                      Your Reset OTP Code: <span className="text-primary tracking-widest text-sm bg-surface-lowest px-2 py-0.5 rounded border border-primary/30">{generatedOTP}</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">6-Digit OTP Code</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="Enter 6-digit OTP"
+                    value={resetOTP}
+                    onChange={(e) => setResetOTP(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm font-mono font-bold text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all tracking-widest"
+                    disabled={resetLoading}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">New Password</label>
+                  <input
+                    type="password"
+                    placeholder="Enter new password (min 6 characters)"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                    disabled={resetLoading}
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setResetStep(1)}
+                    className="text-xs text-outline hover:text-on-surface font-bold cursor-pointer"
+                  >
+                    &larr; Back to Email
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold py-2.5 px-4 rounded-sm shadow-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {resetLoading ? 'Updating Password...' : 'Reset Password'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Login;
-
-

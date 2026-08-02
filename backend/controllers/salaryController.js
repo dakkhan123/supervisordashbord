@@ -9,9 +9,6 @@ class SalaryController {
         const logs = await salaryService.getMySalaries(workerId, req.query);
         return res.status(200).json({ success: true, count: logs.length, data: logs });
       }
-      if (userRole.toLowerCase() !== 'owner' && userRole.toLowerCase() !== 'supervisor') {
-        return res.status(403).json({ success: false, message: 'Access denied: Cannot view salaries' });
-      }
       const logs = await salaryService.getAllSalaries(req.query);
       res.status(200).json({ success: true, count: logs.length, data: logs });
     } catch (err) {
@@ -29,13 +26,8 @@ class SalaryController {
     }
   }
 
-
   async calculateSalary(req, res, next) {
     try {
-      const userRole = req.user ? req.user.role : '';
-      if (userRole.toLowerCase() !== 'owner' && userRole.toLowerCase() !== 'supervisor') {
-        return res.status(403).json({ success: false, message: 'Access denied: Cannot calculate salary' });
-      }
       const { worker, month } = req.query;
       const calc = await salaryService.calculateSalary(worker, month);
       res.status(200).json({ success: true, data: calc });
@@ -44,11 +36,25 @@ class SalaryController {
     }
   }
 
+  async setMonthlySalary(req, res, next) {
+    try {
+      const userRole = req.user ? req.user.role : '';
+      if (userRole.toLowerCase() === 'worker') {
+        return res.status(403).json({ success: false, message: 'Access denied: Workers cannot edit salary' });
+      }
+      const { workerId, salary, month } = req.body;
+      const log = await salaryService.setMonthlySalary(workerId, salary, month);
+      res.status(200).json({ success: true, data: log });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async createSalary(req, res, next) {
     try {
       const userRole = req.user ? req.user.role : '';
-      if (userRole.toLowerCase() !== 'owner' && userRole.toLowerCase() !== 'supervisor') {
-        return res.status(403).json({ success: false, message: 'Access denied: Cannot create salary' });
+      if (userRole.toLowerCase() === 'worker') {
+        return res.status(403).json({ success: false, message: 'Access denied: Workers cannot edit salary' });
       }
       const log = await salaryService.createSalary(req.body);
       res.status(201).json({ success: true, data: log });
@@ -59,10 +65,6 @@ class SalaryController {
 
   async getSalaryById(req, res, next) {
     try {
-      const userRole = req.user ? req.user.role : '';
-      if (userRole.toLowerCase() !== 'owner' && userRole.toLowerCase() !== 'supervisor') {
-        return res.status(403).json({ success: false, message: 'Access denied: Cannot view salary' });
-      }
       const log = await salaryService.getSalaryById(req.params.id);
       res.status(200).json({ success: true, data: log });
     } catch (err) {
@@ -73,8 +75,8 @@ class SalaryController {
   async updateSalary(req, res, next) {
     try {
       const userRole = req.user ? req.user.role : '';
-      if (userRole.toLowerCase() !== 'owner' && userRole.toLowerCase() !== 'supervisor') {
-        return res.status(403).json({ message: 'Access denied: Cannot edit salary' });
+      if (userRole.toLowerCase() === 'worker') {
+        return res.status(403).json({ success: false, message: 'Access denied: Workers cannot edit salary' });
       }
       const log = await salaryService.updateSalary(req.params.id, req.body);
       res.status(200).json({ success: true, data: log });
@@ -86,8 +88,8 @@ class SalaryController {
   async deleteSalary(req, res, next) {
     try {
       const userRole = req.user ? req.user.role : '';
-      if (userRole.toLowerCase() !== 'owner' && userRole.toLowerCase() !== 'supervisor') {
-        return res.status(403).json({ success: false, message: 'Access denied: Cannot delete salary' });
+      if (userRole.toLowerCase() === 'worker') {
+        return res.status(403).json({ success: false, message: 'Access denied: Workers cannot delete salary' });
       }
       await salaryService.deleteSalary(req.params.id);
       res.status(200).json({ success: true, data: {} });
@@ -95,7 +97,39 @@ class SalaryController {
       next(err);
     }
   }
+
+  async approveOvertime(req, res, next) {
+    try {
+      const userRole = req.user ? req.user.role : '';
+      if (userRole.toLowerCase() === 'worker') {
+        return res.status(403).json({ success: false, message: 'Access denied: Workers cannot approve overtime' });
+      }
+      const ot = await salaryService.approveOvertime(req.body);
+      res.status(200).json({ success: true, data: ot });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getOvertimeHistory(req, res, next) {
+    try {
+      const workerId = req.query.worker || (req.user ? req.user.workerId : null);
+      const history = await salaryService.getOvertimeHistory(workerId);
+      res.status(200).json({ success: true, count: history.length, data: history });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getSalaryHistory(req, res, next) {
+    try {
+      const workerId = req.query.worker || (req.user ? req.user.workerId : null);
+      const history = await salaryService.getSalaryHistory(workerId);
+      res.status(200).json({ success: true, count: history.length, data: history });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new SalaryController();
-

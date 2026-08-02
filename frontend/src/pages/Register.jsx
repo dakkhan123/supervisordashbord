@@ -4,9 +4,10 @@ import { api } from '../services/api';
 
 const Register = ({ showToast }) => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('Supervisor');
   const [dateOfJoining, setDateOfJoining] = useState(new Date().toISOString().split('T')[0]);
@@ -20,24 +21,40 @@ const Register = ({ showToast }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim() || !name.trim()) {
-      showToast('Please fill in all required fields (username, password, name)', 'error');
+
+    // 1. Mandatory Fields Validation
+    if (!name.trim() || !username.trim() || !email.trim() || !password.trim()) {
+      showToast('Please fill in all required fields (Full Name, Username, Email, Password).', 'error');
+      return;
+    }
+
+    // 2. Email Format Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      showToast('Please enter a valid email address (e.g. user@example.com).', 'error');
+      return;
+    }
+
+    // 3. Mobile Number 10-Digit Numeric Validation
+    if (phone.trim() && (!/^\d+$/.test(phone.trim()) || phone.trim().length !== 10)) {
+      showToast('Mobile number must be exactly 10 numeric digits.', 'error');
       return;
     }
 
     try {
       setLoading(true);
       const res = await api.register({
-        username,
-        password,
-        name,
-        phone,
+        name: name.trim(),
+        username: username.trim(),
+        email: email.trim(),
+        password: password.trim(),
+        phone: phone.trim(),
         role,
         dateOfJoining
       });
 
       if (res.success) {
-        showToast('Account registered successfully! Please sign in.', 'success');
+        showToast('Supervisor account registered successfully! Please sign in.', 'success');
         navigate('/login');
       } else {
         showToast(res.error || 'Registration failed', 'error');
@@ -52,9 +69,8 @@ const Register = ({ showToast }) => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row items-center justify-center p-0 md:p-0">
-      {/* Left branding card: Sidebar matching style */}
+      {/* Left branding card */}
       <div className="w-full md:w-[45%] lg:w-[40%] min-h-[300px] md:min-h-screen bg-[#213145] text-white flex flex-col justify-between p-10 md:p-14 relative overflow-hidden flex-shrink-0">
-        {/* Glow decoration */}
         <div className="absolute top-[-20%] right-[-20%] w-[350px] h-[350px] bg-[#5dd9d8]/10 rounded-full blur-[80px]"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-[250px] h-[250px] bg-primary/10 rounded-full blur-[60px]"></div>
 
@@ -88,7 +104,7 @@ const Register = ({ showToast }) => {
         <div className="w-full max-w-[420px] animate-scale-up flex flex-col gap-5">
           <div>
             <h3 className="text-2xl font-extrabold text-on-surface tracking-tight">Register Credentials</h3>
-            <p className="text-xs text-outline font-semibold mt-1">Please enter your staff details to register a console profile.</p>
+            <p className="text-xs text-outline font-semibold mt-1">Please enter your details to register a supervisor console profile.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
@@ -125,6 +141,22 @@ const Register = ({ showToast }) => {
             </div>
 
             <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Email Address (Required)</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">mail</span>
+                <input
+                  type="email"
+                  placeholder="e.g. rajesh.kumar@factory.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                  disabled={loading}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
               <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Password (Required)</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">lock</span>
@@ -141,15 +173,19 @@ const Register = ({ showToast }) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Mobile Phone (+91)</label>
+              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Mobile Phone (10 Digits)</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">phone</span>
                 <input
                   type="text"
+                  maxLength={10}
                   placeholder="e.g. 9876543210"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, ''); // Numeric input only
+                    if (val.length <= 10) setPhone(val);
+                  }}
+                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono"
                   disabled={loading}
                 />
               </div>

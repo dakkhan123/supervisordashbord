@@ -75,33 +75,33 @@ const WorkerDashboard = ({ showToast }) => {
     return () => clearInterval(interval);
   }, [todayRecord]);
 
-  const workerName = user?.worker?.name || user?.name || user?.username || 'Suresh Kumar';
-  const designation = user?.worker?.designation || 'Senior CNC Machinist';
-  const department = user?.worker?.department || user?.department || 'Precision Machining Department';
+  const workerName = user?.worker?.name || user?.name || user?.username || 'Worker';
+  const designation = user?.worker?.designation || 'Senior Operator';
+  const department = user?.worker?.department || user?.department || 'Operations';
   const empId = user?.worker?.employeeId || user?.employeeId || 'EMP-2026-8842';
 
   return (
     <div className="flex flex-col gap-6 text-on-surface font-sans">
       {/* 1. Shift Dashboard Hero Banner */}
-      <div className="bg-gradient-to-r from-teal-700 via-teal-800 to-emerald-800 rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-teal-500/20 text-white">
+      <div className="bg-gradient-to-r from-primary via-primary-container to-tertiary rounded-md p-6 md:p-8 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6 text-white">
         <div className="z-10 flex flex-col gap-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-black/20 backdrop-blur-md rounded-full text-teal-200 text-[10px] font-extrabold uppercase tracking-widest w-fit border border-white/10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-black/20 backdrop-blur-md rounded-full text-primary-fixed text-[10px] font-extrabold uppercase tracking-widest w-fit border border-white/10">
             SHIFT DASHBOARD
           </div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
             Welcome back, {workerName}
           </h1>
-          <p className="text-xs md:text-sm text-teal-100/90 font-medium">
+          <p className="text-xs md:text-sm text-secondary-fixed-dim font-medium">
             {designation} • {department}
           </p>
         </div>
 
         <div className="z-10 text-left md:text-right flex flex-col gap-1 border-t md:border-t-0 border-white/10 pt-4 md:pt-0 w-full md:w-auto">
-          <p className="text-xs font-bold text-teal-100 flex items-center gap-1.5 justify-start md:justify-end">
+          <p className="text-xs font-bold text-primary-fixed flex items-center gap-1.5 justify-start md:justify-end">
             <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-            Thursday, July 23, 2026
+            Shift Operations Console
           </p>
-          <p className="text-[11px] font-semibold text-teal-200/80">
+          <p className="text-[11px] font-semibold text-secondary-fixed-dim">
             Employee ID: <span className="font-mono">{empId}</span>
           </p>
         </div>
@@ -111,7 +111,7 @@ const WorkerDashboard = ({ showToast }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         
         {/* Card 1: Today's Attendance */}
-        <div className="bg-surface border border-outline-variant rounded-2xl p-5 shadow-sm relative overflow-hidden flex flex-col justify-between gap-4">
+        <div className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm relative overflow-hidden flex flex-col justify-between gap-4">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-sm font-bold text-on-surface">Today's Attendance</h3>
@@ -119,20 +119,19 @@ const WorkerDashboard = ({ showToast }) => {
             </div>
             <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border flex items-center gap-1 ${
               todayRecord?.checkOut 
-                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
+                ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' 
                 : todayRecord?.checkIn 
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                ? 'bg-primary/10 text-primary border border-primary/20' 
+                : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${
-                todayRecord?.checkOut ? 'bg-rose-400' : todayRecord?.checkIn ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                todayRecord?.checkOut ? 'bg-rose-600' : todayRecord?.checkIn ? 'bg-primary animate-pulse' : 'bg-amber-600'
               }`}></span>
               {todayRecord?.checkOut ? 'Checked Out' : todayRecord?.checkIn ? 'Checked In' : 'Not Clocked In'}
             </span>
           </div>
 
           <div className="relative my-2">
-            {/* Background Watermark */}
             <span className="material-symbols-outlined absolute right-2 bottom-0 text-[90px] text-on-surface/5 select-none pointer-events-none">
               fingerprint
             </span>
@@ -161,7 +160,7 @@ const WorkerDashboard = ({ showToast }) => {
 
           <Link
             to="/worker/attendance"
-            className="w-full py-2.5 px-4 rounded-xl border border-outline-variant hover:border-primary bg-surface-low hover:bg-surface-container text-xs font-bold text-on-surface transition-all flex items-center justify-center gap-2 cursor-pointer mt-1"
+            className="w-full py-2.5 px-4 rounded-sm border border-outline-variant hover:border-primary bg-surface-low hover:bg-surface-container text-xs font-bold text-on-surface transition-all flex items-center justify-center gap-2 cursor-pointer mt-1"
           >
             <span className="material-symbols-outlined text-[18px]">fingerprint</span>
             Biometric Console
@@ -169,24 +168,24 @@ const WorkerDashboard = ({ showToast }) => {
         </div>
 
         {/* Card 2: Monthly Attendance Summary */}
-        <div className="bg-surface border border-outline-variant rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4">
+        <div className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm flex flex-col justify-between gap-4">
           <div>
             <h3 className="text-sm font-bold text-on-surface">Monthly Attendance Summary</h3>
-            <p className="text-[11px] text-outline font-medium mt-0.5">Logs distribution for July 2026</p>
+            <p className="text-[11px] text-outline font-medium mt-0.5">Logs distribution summary</p>
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-surface-low border border-outline-variant rounded-xl p-3">
+            <div className="bg-surface-low border border-outline-variant rounded-sm p-3">
               <p className="text-[10px] font-bold text-outline uppercase">Present</p>
-              <p className="text-xl font-black text-emerald-600 mt-1">{presentDays || 7}</p>
+              <p className="text-xl font-black text-primary mt-1">{presentDays || 0}</p>
             </div>
-            <div className="bg-surface-low border border-outline-variant rounded-xl p-3">
+            <div className="bg-surface-low border border-outline-variant rounded-sm p-3">
               <p className="text-[10px] font-bold text-outline uppercase">Late / Half</p>
-              <p className="text-xl font-black text-amber-600 mt-1">{lateDays || '1/1'}</p>
+              <p className="text-xl font-black text-amber-600 mt-1">{lateDays || 0}</p>
             </div>
-            <div className="bg-surface-low border border-outline-variant rounded-xl p-3">
+            <div className="bg-surface-low border border-outline-variant rounded-sm p-3">
               <p className="text-[10px] font-bold text-outline uppercase">Absent / Leave</p>
-              <p className="text-xl font-black text-rose-600 mt-1">{absentDays || '0/1'}</p>
+              <p className="text-xl font-black text-error mt-1">{absentDays || 0}</p>
             </div>
           </div>
 
@@ -195,8 +194,8 @@ const WorkerDashboard = ({ showToast }) => {
               <span className="text-[10px] text-outline uppercase tracking-wider">SHIFT DUTY PERFORMANCE</span>
               <span className="text-primary font-extrabold">90%</span>
             </div>
-            <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full" style={{ width: '90%' }}></div>
+            <div className="w-full h-2 bg-surface-low border border-outline-variant/60 rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full" style={{ width: '90%' }}></div>
             </div>
             <p className="text-[11px] text-outline font-semibold mt-1">
               Overtime Premium Hours: <span className="text-on-surface font-bold">2.0 Hours</span>
@@ -205,19 +204,19 @@ const WorkerDashboard = ({ showToast }) => {
         </div>
 
         {/* Card 3: Attendance Timeline */}
-        <div className="bg-surface border border-outline-variant rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4">
+        <div className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm flex flex-col justify-between gap-4">
           <div>
             <h3 className="text-sm font-bold text-on-surface">Attendance Timeline</h3>
             <p className="text-[11px] text-outline font-medium mt-0.5">Chronological sequence of today's events</p>
           </div>
 
           <div className="flex-1 min-h-[140px] flex flex-col items-center justify-center text-center p-4">
-            <span className="material-symbols-outlined text-[48px] text-outline/60 mb-2">
+            <span className="material-symbols-outlined text-[48px] text-outline/40 mb-2">
               fingerprint
             </span>
-            <p className="text-xs font-bold text-on-surface">Awaiting biometric Check-In</p>
+            <p className="text-xs font-bold text-on-surface">Biometric Session Active</p>
             <p className="text-[10px] text-outline max-w-xs mt-1">
-              Clock in from biometric tab to start shift tracking
+              Clock in/out events are recorded automatically on your supervisor ledger.
             </p>
           </div>
         </div>
@@ -228,7 +227,7 @@ const WorkerDashboard = ({ showToast }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         
         {/* Card 1: Earnings History & Overtime */}
-        <div className="md:col-span-2 bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+        <div className="md:col-span-2 bg-surface-lowest border border-outline-variant rounded-md p-6 shadow-sm flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-outline-variant/40 pb-3">
             <div>
               <h3 className="text-sm font-bold text-on-surface">Earnings History & Overtime</h3>
@@ -244,7 +243,7 @@ const WorkerDashboard = ({ showToast }) => {
               <span>Net Earnings (₹)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+              <span className="w-3 h-3 rounded-full bg-tertiary inline-block"></span>
               <span>Overtime Premium (₹)</span>
             </div>
           </div>
@@ -267,7 +266,7 @@ const WorkerDashboard = ({ showToast }) => {
                     title={`Net: ₹${item.net}`}
                   ></div>
                   <div
-                    className="w-1/2 bg-emerald-500 rounded-t-sm transition-all"
+                    className="w-1/2 bg-tertiary rounded-t-sm transition-all"
                     style={{ height: `${(item.ot / 5000) * 100}%` }}
                     title={`Overtime: ₹${item.ot}`}
                   ></div>
@@ -279,10 +278,10 @@ const WorkerDashboard = ({ showToast }) => {
         </div>
 
         {/* Card 2: Task Status Matrix */}
-        <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col justify-between gap-4">
+        <div className="bg-surface-lowest border border-outline-variant rounded-md p-6 shadow-sm flex flex-col justify-between gap-4">
           <div className="border-b border-outline-variant/40 pb-3">
             <h3 className="text-sm font-bold text-on-surface">Task Status Matrix</h3>
-            <p className="text-[11px] text-outline font-medium">Active queue ratio of tasks assigned on your CNC desk.</p>
+            <p className="text-[11px] text-outline font-medium">Active queue ratio of tasks assigned on your desk.</p>
           </div>
 
           <div className="flex flex-col items-center justify-center my-2">
@@ -290,7 +289,7 @@ const WorkerDashboard = ({ showToast }) => {
             <div className="relative w-36 h-36 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                 <path
-                  className="text-surface-container"
+                  className="text-surface-low"
                   strokeWidth="4"
                   stroke="currentColor"
                   fill="none"
@@ -319,7 +318,7 @@ const WorkerDashboard = ({ showToast }) => {
               <span className="text-outline font-medium">Completed ({completedTasks.length})</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-surface-container border border-outline-variant"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-surface-low border border-outline-variant"></span>
               <span className="text-outline font-medium">Pending ({pendingTasks.length})</span>
             </div>
           </div>

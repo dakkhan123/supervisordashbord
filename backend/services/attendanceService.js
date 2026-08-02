@@ -1,6 +1,7 @@
 const Attendance = require('../models/Attendance');
 const Notification = require('../models/Notification');
 const Worker = require('../models/Worker');
+const salaryService = require('./salaryService');
 
 class AttendanceService {
   async getAllAttendance(queryParams) {
@@ -19,7 +20,6 @@ class AttendanceService {
   }
 
   async getMyAttendance(workerId, queryParams) {
-    const { month, year } = queryParams || {};
     let query = { worker: workerId };
     return await Attendance.find(query).populate('worker').sort({ date: -1 });
   }
@@ -48,6 +48,10 @@ class AttendanceService {
         description: `Status: ${record.status}, Check-in: ${record.checkInTime || '-'}`,
         type: 'attendance'
       });
+
+      // Auto recalculate salary
+      const targetMonth = `${new Date(record.date || Date.now()).toLocaleString('en-US', { month: 'long' })} ${new Date(record.date || Date.now()).getFullYear()}`;
+      salaryService.recalculateAndSaveSalary(record.worker, targetMonth, 'Auto_Attendance_Create').catch(e => console.error(e));
     }
     return populated;
   }
@@ -73,6 +77,10 @@ class AttendanceService {
         message: `Attendance log modified: ${record.status}`,
         type: 'attendance'
       });
+
+      // Auto recalculate salary
+      const targetMonth = `${new Date(record.date || Date.now()).toLocaleString('en-US', { month: 'long' })} ${new Date(record.date || Date.now()).getFullYear()}`;
+      salaryService.recalculateAndSaveSalary(record.worker, targetMonth, 'Auto_Attendance_Update').catch(e => console.error(e));
     }
 
     return record;
@@ -85,6 +93,12 @@ class AttendanceService {
       error.statusCode = 404;
       throw error;
     }
+
+    if (record.worker) {
+      const targetMonth = `${new Date(record.date || Date.now()).toLocaleString('en-US', { month: 'long' })} ${new Date(record.date || Date.now()).getFullYear()}`;
+      salaryService.recalculateAndSaveSalary(record.worker, targetMonth, 'Auto_Attendance_Delete').catch(e => console.error(e));
+    }
+
     return true;
   }
 
@@ -94,7 +108,6 @@ class AttendanceService {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    // Find worker
     const workerObj = await Worker.findById(workerId);
     if (!workerObj) {
       const error = new Error('Worker profile not found');
@@ -102,7 +115,6 @@ class AttendanceService {
       throw error;
     }
 
-    // Check if check-in already exists for today
     const existing = await Attendance.findOne({
       worker: workerId,
       date: { $gte: todayStart, $lte: todayEnd }
@@ -114,20 +126,17 @@ class AttendanceService {
       throw error;
     }
 
-    // Determine shift start time and late status
     const shift = details.shift || workerObj.shiftTiming || '9:00 AM - 6:00 PM';
     let isLate = false;
     const now = new Date();
     const currentHours = now.getHours();
     const currentMinutes = now.getMinutes();
 
-    // Default shift start time: 9:00 AM
     let shiftStartHour = 9;
     let shiftStartMinute = 0;
 
-    // Try parsing shift timing (e.g. "9:00 AM - 6:00 PM")
     try {
-      const startTimeStr = shift.split('-')[0].trim(); // "9:00 AM"
+      const startTimeStr = shift.split('-')[0].trim();
       const parts = startTimeStr.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
       if (parts) {
         let h = parseInt(parts[1], 10);
@@ -142,7 +151,6 @@ class AttendanceService {
       console.error('Failed to parse shift start time', e);
     }
 
-    // Grace period of 15 minutes
     const graceTimeMinutes = shiftStartHour * 60 + shiftStartMinute + 15;
     const currentTimeMinutes = currentHours * 60 + currentMinutes;
 
@@ -153,13 +161,12 @@ class AttendanceService {
     const attendanceType = isLate ? 'Late' : 'Present';
     const status = isLate ? 'Late' : 'Present';
 
-    // Format current time as hh:mm AM/PM
     const formatTimeStr = (date) => {
       let hours = date.getHours();
       let minutes = date.getMinutes();
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12;
-      hours = hours ? hours : 12; // the hour '0' should be '12'
+      hours = hours ? hours : 12;
       minutes = minutes < 10 ? '0' + minutes : minutes;
       return `${hours}:${minutes} ${ampm}`;
     };
@@ -197,7 +204,6 @@ class AttendanceService {
       }
     });
 
-    // Create Notification
     await Notification.create({
       worker: workerId,
       user: userId,
@@ -206,6 +212,10 @@ class AttendanceService {
       description: `GPS: ${details.latitude}, ${details.longitude} - Address: ${details.address || 'N/A'}`,
       type: 'attendance'
     });
+
+    // Auto recalculate salary
+    const targetMonth = `${now.toLocaleString('en-US', { month: 'long' })} ${now.getFullYear()}`;
+    salaryService.recalculateAndSaveSalary(workerId, targetMonth, 'Auto_CheckIn').catch(e => console.error(e));
 
     return await Attendance.findById(record._id).populate('worker');
   }
@@ -216,7 +226,6 @@ class AttendanceService {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    // Find today's attendance record
     const record = await Attendance.findOne({
       worker: workerId,
       date: { $gte: todayStart, $lte: todayEnd }
@@ -249,19 +258,16 @@ class AttendanceService {
     record.checkOut = now;
     record.checkOutTime = checkOutTimeStr;
 
-    // Calculate working hours
     const diffMs = now - record.checkIn;
-    const workingHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // round to 2 decimals
+    const workingHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
     record.workingHours = workingHours;
     record.totalWorkedHours = workingHours;
 
-    // If working hours < 4, attendance status becomes Half Day
     if (workingHours < 4) {
       record.status = 'Half Day';
       record.attendanceType = 'Half Day';
     }
 
-    // Overtime
     if (workingHours > 8) {
       record.overtimeHours = Math.round((workingHours - 8) * 100) / 100;
     }
@@ -283,7 +289,6 @@ class AttendanceService {
 
     await record.save();
 
-    // Create Notification
     await Notification.create({
       worker: workerId,
       user: userId,
@@ -292,6 +297,10 @@ class AttendanceService {
       description: `Worked hours: ${workingHours} hrs. Overtime: ${record.overtimeHours} hrs.`,
       type: 'attendance'
     });
+
+    // Auto recalculate salary
+    const targetMonth = `${now.toLocaleString('en-US', { month: 'long' })} ${now.getFullYear()}`;
+    salaryService.recalculateAndSaveSalary(workerId, targetMonth, 'Auto_CheckOut').catch(e => console.error(e));
 
     return await Attendance.findById(record._id).populate('worker');
   }
@@ -359,4 +368,3 @@ class AttendanceService {
 }
 
 module.exports = new AttendanceService();
-

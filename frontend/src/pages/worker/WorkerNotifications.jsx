@@ -75,7 +75,7 @@ const WorkerNotifications = ({ showToast }) => {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto text-on-surface font-sans">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/40 pb-4">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-on-surface">Notifications & Alerts</h2>
@@ -87,7 +87,7 @@ const WorkerNotifications = ({ showToast }) => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="btn btn-outline border border-outline-variant text-primary hover:bg-primary/10 font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer"
+              className="btn border border-outline-variant text-primary hover:bg-primary/10 font-bold px-3 py-2 rounded-sm text-xs flex items-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">done_all</span>
               Mark All Read
@@ -95,7 +95,7 @@ const WorkerNotifications = ({ showToast }) => {
           )}
           <button
             onClick={fetchNotifications}
-            className="btn btn-outline border border-outline-variant text-on-surface hover:bg-surface-container font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-2 cursor-pointer"
+            className="btn border border-outline-variant text-on-surface hover:bg-surface-low font-bold px-4 py-2 rounded-sm text-xs flex items-center gap-2 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">refresh</span>
             Refresh
@@ -112,7 +112,7 @@ const WorkerNotifications = ({ showToast }) => {
             className={`px-4 py-1.5 rounded-full text-xs font-extrabold capitalize transition-all cursor-pointer ${
               filter === tab
                 ? 'bg-primary text-white shadow-sm'
-                : 'bg-surface border border-outline-variant text-outline hover:text-on-surface'
+                : 'bg-surface-lowest border border-outline-variant text-outline hover:text-on-surface'
             }`}
           >
             {tab} {tab === 'unread' && unreadCount > 0 ? `(${unreadCount})` : ''}
@@ -121,7 +121,7 @@ const WorkerNotifications = ({ showToast }) => {
       </div>
 
       {/* Notifications List */}
-      <div className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm flex flex-col gap-3">
+      <div className="bg-surface-lowest border border-outline-variant rounded-md p-4 shadow-sm flex flex-col gap-3">
         {loading ? (
           <div className="py-12 text-center text-xs text-outline font-semibold">Loading notifications...</div>
         ) : filteredNotifs.length === 0 ? (
@@ -131,14 +131,14 @@ const WorkerNotifications = ({ showToast }) => {
             <div
               key={n._id}
               onClick={() => setSelectedNotif(n)}
-              className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer ${
+              className={`p-4 rounded-md border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer ${
                 !n.isRead
                   ? 'bg-primary/[0.04] border-primary/40 shadow-xs'
                   : 'bg-surface-low border-outline-variant/40 hover:border-primary/40'
               }`}
             >
               <div className="flex items-start gap-3.5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${!n.isRead ? 'bg-primary/10 text-primary' : 'bg-surface-container text-outline'}`}>
+                <div className={`w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 ${!n.isRead ? 'bg-primary/10 text-primary' : 'bg-surface-low text-outline'}`}>
                   <span className="material-symbols-outlined text-[20px]">
                     {n.type === 'attendance' ? 'fingerprint' : n.type === 'salary' ? 'payments' : 'notifications'}
                   </span>
@@ -165,7 +165,7 @@ const WorkerNotifications = ({ showToast }) => {
                     e.stopPropagation();
                     setSelectedNotif(n);
                   }}
-                  className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-container transition-all cursor-pointer flex items-center gap-1"
+                  className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold px-3 py-1.5 rounded-sm transition-all cursor-pointer flex items-center gap-1 uppercase tracking-wider shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[15px]">visibility</span>
                   View Details

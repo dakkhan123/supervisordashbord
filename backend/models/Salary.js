@@ -12,7 +12,11 @@ const SalarySchema = new mongoose.Schema({
   },
   month: {
     type: String,
-    required: [true, 'Month field is required (e.g. June 2026)']
+    required: [true, 'Month field is required (e.g. August 2026)']
+  },
+  monthlySalary: {
+    type: Number,
+    default: 0
   },
   baseSalary: {
     type: Number,
@@ -22,19 +26,59 @@ const SalarySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  tasksCompleted: {
+  totalDays: {
+    type: Number,
+    default: 30
+  },
+  totalDaysInMonth: {
+    type: Number,
+    default: 30
+  },
+  perDaySalary: {
     type: Number,
     default: 0
   },
-  tasksIncentive: {
+  presentDays: {
     type: Number,
     default: 0
   },
-  bonus: {
+  absentDays: {
     type: Number,
     default: 0
   },
-  allowances: {
+  excusedAbsentDays: {
+    type: Number,
+    default: 0
+  },
+  chargeableAbsentDays: {
+    type: Number,
+    default: 0
+  },
+  absentDeduction: {
+    type: Number,
+    default: 0
+  },
+  lateCount: {
+    type: Number,
+    default: 0
+  },
+  excusedLateCount: {
+    type: Number,
+    default: 0
+  },
+  chargeableLateCount: {
+    type: Number,
+    default: 0
+  },
+  lateDeduction: {
+    type: Number,
+    default: 0
+  },
+  overtimeDays: {
+    type: Number,
+    default: 0
+  },
+  overtimePay: {
     type: Number,
     default: 0
   },
@@ -42,25 +86,17 @@ const SalarySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  overtimeRate: {
-    type: Number,
-    default: 150
-  },
-  overtime: {
-    type: Number,
-    default: 0
-  },
   deductions: {
     type: Number,
     default: 0
   },
-  advances: {
+  finalSalary: {
     type: Number,
     default: 0
   },
   amount: {
     type: Number,
-    required: [true, 'Salary amount is required']
+    default: 0
   },
   netSalary: {
     type: Number,
@@ -91,10 +127,14 @@ const SalarySchema = new mongoose.Schema({
 });
 
 SalarySchema.pre('save', function(next) {
-  if (!this.basicSalary && this.baseSalary) this.basicSalary = this.baseSalary;
-  if (!this.baseSalary && this.basicSalary) this.baseSalary = this.basicSalary;
-  if (!this.netSalary && this.amount) this.netSalary = this.amount;
-  if (!this.amount && this.netSalary) this.amount = this.netSalary;
+  if (!this.monthlySalary && this.baseSalary) this.monthlySalary = this.baseSalary;
+  if (!this.baseSalary && this.monthlySalary) this.baseSalary = this.monthlySalary;
+  if (!this.basicSalary && this.monthlySalary) this.basicSalary = this.monthlySalary;
+  if (!this.totalDays && this.totalDaysInMonth) this.totalDays = this.totalDaysInMonth;
+  if (!this.totalDaysInMonth && this.totalDays) this.totalDaysInMonth = this.totalDays;
+  if (!this.amount && this.finalSalary) this.amount = this.finalSalary;
+  if (!this.finalSalary && this.amount) this.finalSalary = this.amount;
+  if (!this.netSalary && this.finalSalary) this.netSalary = this.finalSalary;
   if (!this.paymentStatus && this.status) this.paymentStatus = this.status;
   if (!this.status && this.paymentStatus) this.status = this.paymentStatus;
   if (!this.slipId) {
@@ -104,5 +144,3 @@ SalarySchema.pre('save', function(next) {
 });
 
 module.exports = mongoose.model('Salary', SalarySchema);
-
-

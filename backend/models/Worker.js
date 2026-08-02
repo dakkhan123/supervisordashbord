@@ -9,7 +9,8 @@ const WorkerSchema = new mongoose.Schema({
   email: {
     type: String,
     trim: true,
-    lowercase: true
+    lowercase: true,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please specify a valid email address']
   },
   employeeId: {
     type: String,
@@ -17,7 +18,14 @@ const WorkerSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return /^\d{10}$/.test(v);
+      },
+      message: 'Mobile number must be exactly 10 numeric digits'
+    }
   },
   department: {
     type: String,
@@ -63,4 +71,3 @@ const WorkerSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Worker', WorkerSchema);
-

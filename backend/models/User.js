@@ -10,8 +10,11 @@ const UserSchema = new mongoose.Schema({
   },
   email: {
     type: String,
+    required: [true, 'Please specify an email address'],
+    unique: true,
     trim: true,
-    lowercase: true
+    lowercase: true,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please specify a valid email address']
   },
   employeeId: {
     type: String,
@@ -33,7 +36,14 @@ const UserSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return /^\d{10}$/.test(v);
+      },
+      message: 'Mobile number must be exactly 10 numeric digits'
+    }
   },
   status: {
     type: String,
@@ -44,6 +54,8 @@ const UserSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Worker'
   },
+  resetPasswordOTP: String,
+  resetPasswordOTPExpire: Date,
   settings: {
     darkMode: { type: Boolean, default: false },
     fontSize: { type: String, enum: ['sm', 'base', 'lg', 'xl'], default: 'base' },
@@ -56,4 +68,3 @@ const UserSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('User', UserSchema);
-
