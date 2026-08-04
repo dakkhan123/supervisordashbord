@@ -4,6 +4,8 @@ import { api } from '../services/api';
 
 const Register = ({ showToast }) => {
   const navigate = useNavigate();
+
+  // Registration Form State
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -13,18 +15,49 @@ const Register = ({ showToast }) => {
   const [dateOfJoining, setDateOfJoining] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
+  // OTP Verification Step State
+  const [step, setStep] = useState(1); // Step 1: Form details, Step 2: OTP Verification
+  const [otp, setOtp] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [timer, setTimer] = useState(30); // 30-second resend countdown
+  const [canResend, setCanResend] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
   useEffect(() => {
     if (localStorage.getItem('smartops_token')) {
       navigate('/');
     }
   }, [navigate]);
 
+  // 30-second Resend Timer countdown effect
+  useEffect(() => {
+    let interval = null;
+    if (step === 2 && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      setCanResend(true);
+      if (interval) clearInterval(interval);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, timer]);
+
+  // Step 1 Submit: Create Console Account (Triggers OTP Email)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
 
     // 1. Mandatory Fields Validation
     if (!name.trim() || !username.trim() || !email.trim() || !password.trim()) {
       showToast('Please fill in all required fields (Full Name, Username, Email, Password).', 'error');
+      setErrorMessage('Full Name, Username, Email, and Password are mandatory.');
       return;
     }
 
@@ -32,12 +65,14 @@ const Register = ({ showToast }) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       showToast('Please enter a valid email address (e.g. user@example.com).', 'error');
+      setErrorMessage('Please enter a valid email address format.');
       return;
     }
 
     // 3. Mobile Number 10-Digit Numeric Validation
     if (phone.trim() && (!/^\d+$/.test(phone.trim()) || phone.trim().length !== 10)) {
       showToast('Mobile number must be exactly 10 numeric digits.', 'error');
+      setErrorMessage('Mobile number must be exactly 10 numeric digits.');
       return;
     }
 
@@ -54,16 +89,94 @@ const Register = ({ showToast }) => {
       });
 
       if (res.success) {
-        showToast('Supervisor account registered successfully! Please sign in.', 'success');
-        navigate('/login');
+        const targetEmail = res.email || email.trim();
+        setRegisteredEmail(targetEmail);
+        setStep(2);
+        setTimer(30);
+        setCanResend(false);
+        setSuccessMessage(`6-digit OTP sent to ${targetEmail}. Please check your inbox.`);
+        showToast(`Verification OTP sent to ${targetEmail}`, 'success');
       } else {
-        showToast(res.error || 'Registration failed', 'error');
+        setErrorMessage(res.error || 'Registration request failed');
+        showToast(res.error || 'Registration request failed', 'error');
       }
     } catch (err) {
       console.error(err);
+      setErrorMessage('Failed to connect to authentication server');
       showToast('Failed to connect to authentication server', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Step 2 Submit: Verify 6-digit OTP
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!otp.trim() || otp.trim().length !== 6) {
+      setErrorMessage('Please enter a 6-digit OTP code.');
+      showToast('Please enter a valid 6-digit OTP.', 'error');
+      return;
+    }
+
+    try {
+      setVerifyLoading(true);
+      const res = await api.verifyOTP({
+        email: registeredEmail,
+        otp: otp.trim()
+      });
+
+      if (res.success) {
+        showToast(res.message || 'Supervisor account verified & created successfully!', 'success');
+        if (res.token) {
+          localStorage.setItem('smartops_token', res.token);
+          if (res.data) {
+            localStorage.setItem('smartops_user', JSON.stringify(res.data));
+          }
+          navigate('/');
+        } else {
+          navigate('/login');
+        }
+      } else {
+        setErrorMessage(res.error || 'Verification failed');
+        showToast(res.error || 'Verification failed', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('Error verifying OTP code.');
+      showToast('Error verifying OTP code.', 'error');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  // Resend OTP Action
+  const handleResendOTP = async () => {
+    if (!canResend || resendLoading) return;
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      setResendLoading(true);
+      const res = await api.resendOTP(registeredEmail);
+
+      if (res.success) {
+        setTimer(30);
+        setCanResend(false);
+        setSuccessMessage('A new 6-digit OTP code has been sent to your email address.');
+        showToast('New OTP sent to email!', 'success');
+      } else {
+        setErrorMessage(res.error || 'Failed to resend OTP code.');
+        showToast(res.error || 'Failed to resend OTP.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('Error requesting new OTP.');
+      showToast('Error requesting new OTP.', 'error');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -80,11 +193,14 @@ const Register = ({ showToast }) => {
           </div>
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">SmartOps</h1>
-            <p className="text-[10px] text-secondary-fixed-dim/70 tracking-wider uppercase">Inventory Management</p>
+            <p className="text-[10px] text-teal-300 font-bold uppercase tracking-wider">Enterprise Operations Portal</p>
           </div>
         </div>
 
         <div className="my-10 md:my-0 z-10">
+          <span className="inline-block px-3 py-1 bg-teal-500/20 text-teal-300 text-[10px] font-extrabold rounded-full uppercase tracking-wider mb-3">
+            {step === 1 ? 'Step 1: Account Info' : 'Step 2: Email Verification'}
+          </span>
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 leading-tight">
             Create <br />
             Supervisor Account
@@ -102,147 +218,260 @@ const Register = ({ showToast }) => {
       {/* Right form container */}
       <div className="w-full md:w-[55%] lg:w-[60%] flex items-center justify-center p-8 md:p-14 min-h-[500px]">
         <div className="w-full max-w-[420px] animate-scale-up flex flex-col gap-5">
-          <div>
-            <h3 className="text-2xl font-extrabold text-on-surface tracking-tight">Register Credentials</h3>
-            <p className="text-xs text-outline font-semibold mt-1">Please enter your details to register a supervisor console profile.</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Full Name (Required)</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">badge</span>
-                <input
-                  type="text"
-                  placeholder="e.g. Rajesh Kumar"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                  disabled={loading}
-                  required
-                />
+          
+          {step === 1 ? (
+            /* STEP 1: Registration Form */
+            <>
+              <div>
+                <h3 className="text-2xl font-extrabold text-on-surface tracking-tight">Register Credentials</h3>
+                <p className="text-xs text-outline font-semibold mt-1">
+                  Enter details to register your supervisor console profile. You will receive an OTP via email to verify your account.
+                </p>
               </div>
-            </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Username (Required)</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">person</span>
-                <input
-                  type="text"
-                  placeholder="e.g. rajesh.kumar"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium font-mono"
-                  disabled={loading}
-                  required
-                />
-              </div>
-            </div>
+              {errorMessage && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400 font-medium">
+                  ⚠️ {errorMessage}
+                </div>
+              )}
 
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Email Address (Required)</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">mail</span>
-                <input
-                  type="email"
-                  placeholder="e.g. rajesh.kumar@factory.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                  disabled={loading}
-                  required
-                />
-              </div>
-            </div>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Full Name (Required)</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">badge</span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Rajesh Kumar"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Password (Required)</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">lock</span>
-                <input
-                  type="password"
-                  placeholder="Create a strong account password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                  disabled={loading}
-                  required
-                />
-              </div>
-            </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Username (Required)</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">person</span>
+                    <input
+                      type="text"
+                      placeholder="e.g. rajesh.kumar"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium font-mono"
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Mobile Phone (10 Digits)</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">phone</span>
-                <input
-                  type="text"
-                  maxLength={10}
-                  placeholder="e.g. 9876543210"
-                  value={phone}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, ''); // Numeric input only
-                    if (val.length <= 10) setPhone(val);
-                  }}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono"
-                  disabled={loading}
-                />
-              </div>
-            </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Email Address (Required)</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">mail</span>
+                    <input
+                      type="email"
+                      placeholder="e.g. rajesh.kumar@factory.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Assigned Role</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">assignment_ind</span>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Password (Required)</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">lock</span>
+                    <input
+                      type="password"
+                      placeholder="Create a strong account password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Mobile Phone (10 Digits)</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">phone</span>
+                    <input
+                      type="text"
+                      maxLength={10}
+                      placeholder="e.g. 9876543210"
+                      value={phone}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 10) setPhone(val);
+                      }}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Assigned Role</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">assignment_ind</span>
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      disabled={loading}
+                    >
+                      <option value="Supervisor">Supervisor (Full Console Rights)</option>
+                      <option value="Worker">Worker (Limited Rights)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Date of Joining</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">calendar_month</span>
+                    <input
+                      type="date"
+                      value={dateOfJoining}
+                      onChange={(e) => setDateOfJoining(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary bg-primary text-white font-bold py-3 px-4 rounded-sm hover:bg-primary-container transition-all active:scale-98 shadow-sm flex items-center justify-center gap-2 mt-3 disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider"
                   disabled={loading}
                 >
-                  <option value="Supervisor">Supervisor (Full Console Rights)</option>
-                  <option value="Worker">Worker (Limited Rights)</option>
-                </select>
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Sending Verification OTP...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[16px] text-white">mark_email_read</span>
+                      Create Console Account
+                    </>
+                  )}
+                </button>
+              </form>
+            </>
+          ) : (
+            /* STEP 2: OTP Verification Form */
+            <>
+              <div>
+                <h3 className="text-2xl font-extrabold text-on-surface tracking-tight">Verify Your Email</h3>
+                <p className="text-xs text-outline font-semibold mt-1">
+                  We sent a 6-digit OTP verification code to <strong className="text-primary font-bold">{registeredEmail}</strong>.
+                </p>
               </div>
-            </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Date of Joining</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">calendar_month</span>
-                <input
-                  type="date"
-                  value={dateOfJoining}
-                  onChange={(e) => setDateOfJoining(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                  disabled={loading}
-                  required
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary bg-primary text-white font-bold py-3 px-4 rounded-sm hover:bg-primary-container transition-all active:scale-98 shadow-sm flex items-center justify-center gap-2 mt-3 disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Registering account...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-[16px] text-white">how_to_reg</span>
-                  Create Console Account
-                </>
+              {successMessage && (
+                <div className="p-3 bg-teal-500/10 border border-teal-500/30 rounded text-xs text-teal-300 font-medium">
+                  ✅ {successMessage}
+                </div>
               )}
-            </button>
-          </form>
+
+              {errorMessage && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400 font-medium">
+                  ⚠️ {errorMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleVerifyOTP} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Enter 6-Digit OTP</label>
+                    <span className="text-[11px] text-outline font-medium">Valid for 10 minutes</span>
+                  </div>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">pin</span>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="e.g. 123456"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      className="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant rounded-sm text-lg font-mono font-bold text-on-surface tracking-[6px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-center"
+                      disabled={verifyLoading}
+                      autoFocus
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between bg-surface-low p-3 rounded border border-outline-variant/40">
+                  <div className="text-xs text-outline font-medium">
+                    {!canResend ? (
+                      <span>Resend code in <strong className="text-primary font-bold font-mono">{timer}s</strong></span>
+                    ) : (
+                      <span className="text-teal-400 font-semibold">You can now request a new OTP</span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleResendOTP}
+                    disabled={!canResend || resendLoading}
+                    className="text-xs font-bold text-primary hover:underline cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    {resendLoading ? 'Resending...' : 'Resend OTP'}
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={verifyLoading}
+                  className="btn bg-primary text-white font-bold py-3 px-4 rounded-sm hover:bg-primary-container transition-all active:scale-98 shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-xs uppercase tracking-wider"
+                >
+                  {verifyLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Verifying OTP...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[16px] text-white">verified</span>
+                      Verify OTP & Create Account
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep(1);
+                      setErrorMessage('');
+                      setSuccessMessage('');
+                    }}
+                    className="text-xs text-outline hover:text-on-surface font-semibold underline cursor-pointer"
+                  >
+                    &larr; Change Registration Details
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
 
           <div className="text-center text-xs font-semibold text-outline">
             Already have a supervisor account?{' '}

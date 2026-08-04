@@ -53,6 +53,24 @@ export const api = {
     return res.json();
   },
 
+  verifyOTP: async (verifyData) => {
+    const res = await fetch(`${API_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(verifyData)
+    });
+    return res.json();
+  },
+
+  resendOTP: async (email) => {
+    const res = await fetch(`${API_URL}/auth/resend-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    return res.json();
+  },
+
   forgotPassword: async (email) => {
     const res = await fetch(`${API_URL}/auth/forgot-password`, {
       method: 'POST',

@@ -50,6 +50,10 @@ const UserSchema = new mongoose.Schema({
     enum: ['Active', 'Inactive'],
     default: 'Active'
   },
+  isEmailVerified: {
+    type: Boolean,
+    default: true
+  },
   worker: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Worker'

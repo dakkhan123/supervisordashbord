@@ -9,6 +9,15 @@ const Login = ({ showToast, onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Unverified Email Modal State
+  const [unverifiedModalOpen, setUnverifiedModalOpen] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [unverifiedOTP, setUnverifiedOTP] = useState('');
+  const [unverifiedVerifyLoading, setUnverifiedVerifyLoading] = useState(false);
+  const [unverifiedResendLoading, setUnverifiedResendLoading] = useState(false);
+  const [unverifiedTimer, setUnverifiedTimer] = useState(30);
+  const [unverifiedCanResend, setUnverifiedCanResend] = useState(false);
+
   // Forgot Password State (ONLY for Supervisors)
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
   const [resetStep, setResetStep] = useState(1); // 1: Email Request, 2: OTP & New Password
@@ -16,7 +25,6 @@ const Login = ({ showToast, onLoginSuccess }) => {
   const [resetOTP, setResetOTP] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
-  const [generatedOTP, setGeneratedOTP] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('smartops_token');
@@ -35,6 +43,22 @@ const Login = ({ showToast, onLoginSuccess }) => {
     }
   }, [navigate]);
 
+  // Timer countdown for unverified resend OTP
+  useEffect(() => {
+    let interval = null;
+    if (unverifiedModalOpen && unverifiedTimer > 0) {
+      interval = setInterval(() => {
+        setUnverifiedTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (unverifiedTimer === 0) {
+      setUnverifiedCanResend(true);
+      if (interval) clearInterval(interval);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [unverifiedModalOpen, unverifiedTimer]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
@@ -45,6 +69,16 @@ const Login = ({ showToast, onLoginSuccess }) => {
     try {
       setLoading(true);
       const res = await api.login({ username, password });
+
+      if (res.unverified) {
+        setUnverifiedEmail(res.email || username.trim());
+        setUnverifiedModalOpen(true);
+        setUnverifiedTimer(30);
+        setUnverifiedCanResend(false);
+        showToast('Please verify your email first.', 'error');
+        return;
+      }
+
       if (res.success) {
         const userRole = (res.data.role || '').toLowerCase();
 
@@ -83,6 +117,57 @@ const Login = ({ showToast, onLoginSuccess }) => {
     }
   };
 
+  // Unverified Email Verification Handler
+  const handleUnverifiedVerify = async (e) => {
+    e.preventDefault();
+    if (!unverifiedOTP.trim() || unverifiedOTP.trim().length !== 6) {
+      showToast('Please enter a 6-digit OTP code.', 'error');
+      return;
+    }
+
+    try {
+      setUnverifiedVerifyLoading(true);
+      const res = await api.verifyOTP({
+        email: unverifiedEmail,
+        otp: unverifiedOTP.trim()
+      });
+
+      if (res.success) {
+        showToast('Email verified successfully! You can now log in.', 'success');
+        setUnverifiedModalOpen(false);
+        setUnverifiedOTP('');
+      } else {
+        showToast(res.error || 'Invalid or expired OTP', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error verifying OTP code.', 'error');
+    } finally {
+      setUnverifiedVerifyLoading(false);
+    }
+  };
+
+  // Unverified Resend OTP Handler
+  const handleUnverifiedResend = async () => {
+    if (!unverifiedCanResend || unverifiedResendLoading) return;
+    try {
+      setUnverifiedResendLoading(true);
+      const res = await api.resendOTP(unverifiedEmail);
+      if (res.success) {
+        setUnverifiedTimer(30);
+        setUnverifiedCanResend(false);
+        showToast('A new 6-digit OTP has been sent to your email.', 'success');
+      } else {
+        showToast(res.error || 'Failed to resend OTP.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error resending OTP.', 'error');
+    } finally {
+      setUnverifiedResendLoading(false);
+    }
+  };
+
   // Step 1: Request Password Reset OTP (Supervisor Only)
   const handleRequestOTP = async (e) => {
     e.preventDefault();
@@ -96,10 +181,6 @@ const Login = ({ showToast, onLoginSuccess }) => {
       const res = await api.forgotPassword(resetEmail.trim());
       if (res.success) {
         showToast(res.message || 'OTP sent to your registered email address.', 'success');
-        if (res.otp) {
-          setGeneratedOTP(res.otp);
-          setResetOTP(res.otp); // Pre-fill for quick testing ease
-        }
         setResetStep(2);
       } else {
         showToast(res.error || 'Failed to process password reset request.', 'error');
@@ -140,7 +221,6 @@ const Login = ({ showToast, onLoginSuccess }) => {
         setResetEmail('');
         setResetOTP('');
         setNewPassword('');
-        setGeneratedOTP('');
       } else {
         showToast(res.error || 'Failed to reset password.', 'error');
       }
@@ -316,6 +396,73 @@ const Login = ({ showToast, onLoginSuccess }) => {
         </div>
       </div>
 
+      {/* Unverified Email Verification Modal */}
+      {unverifiedModalOpen && (
+        <div className="fixed inset-0 z-50 bg-[#0b1c30]/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-lowest border border-outline-variant rounded-md max-w-md w-full p-6 shadow-xl flex flex-col gap-4 text-on-surface animate-scale-up">
+            <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-400 text-[20px]">mark_email_unread</span>
+                <h3 className="text-base font-extrabold text-on-surface">Please Verify Your Email First</h3>
+              </div>
+              <button
+                onClick={() => setUnverifiedModalOpen(false)}
+                className="text-outline hover:text-on-surface cursor-pointer p-1 rounded hover:bg-surface-low"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-outline font-medium">
+              Your account email (<strong className="text-primary font-bold">{unverifiedEmail}</strong>) is not yet verified. Please enter the 6-digit OTP sent to your inbox.
+            </p>
+
+            <form onSubmit={handleUnverifiedVerify} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-outline uppercase tracking-widest">6-Digit Verification OTP</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Enter 6-digit OTP"
+                  value={unverifiedOTP}
+                  onChange={(e) => setUnverifiedOTP(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-3 py-2.5 bg-surface border border-outline-variant rounded-sm text-base font-mono font-bold text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all tracking-[6px] text-center"
+                  disabled={unverifiedVerifyLoading}
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-between bg-surface-low p-2.5 rounded border border-outline-variant/30">
+                <div className="text-xs text-outline font-medium">
+                  {!unverifiedCanResend ? (
+                    <span>Resend in <strong className="text-primary font-bold font-mono">{unverifiedTimer}s</strong></span>
+                  ) : (
+                    <span className="text-teal-400 font-semibold">Resend available</span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleUnverifiedResend}
+                  disabled={!unverifiedCanResend || unverifiedResendLoading}
+                  className="text-xs font-bold text-primary hover:underline cursor-pointer disabled:opacity-40"
+                >
+                  {unverifiedResendLoading ? 'Resending...' : 'Resend OTP'}
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={unverifiedVerifyLoading}
+                className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold py-2.5 px-4 rounded-sm shadow-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {unverifiedVerifyLoading ? 'Verifying OTP...' : 'Verify OTP & Activate Login'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Forgot Password Modal (Supervisor Only) */}
       {forgotModalOpen && (
         <div className="fixed inset-0 z-50 bg-[#0b1c30]/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -337,7 +484,7 @@ const Login = ({ showToast, onLoginSuccess }) => {
               /* Step 1: Request Email */
               <form onSubmit={handleRequestOTP} className="flex flex-col gap-4">
                 <p className="text-xs text-outline font-medium">
-                  Enter your registered supervisor email address to receive a password reset OTP code.
+                  Enter your registered supervisor email address to receive a password reset OTP code via email.
                 </p>
 
                 <div className="flex flex-col gap-1.5">
@@ -361,19 +508,14 @@ const Login = ({ showToast, onLoginSuccess }) => {
                   disabled={resetLoading}
                   className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold py-2.5 px-4 rounded-sm shadow-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-1"
                 >
-                  {resetLoading ? 'Generating OTP...' : 'Send Reset OTP Code'}
+                  {resetLoading ? 'Sending Email OTP...' : 'Send Password Reset Email'}
                 </button>
               </form>
             ) : (
               /* Step 2: Input OTP & New Password */
               <form onSubmit={handleResetPassword} className="flex flex-col gap-4">
                 <div className="p-3 bg-primary/10 border border-primary/20 rounded-sm text-xs text-primary font-medium">
-                  OTP reset code sent to <strong>{resetEmail}</strong>.
-                  {generatedOTP && (
-                    <span className="block font-mono font-bold mt-1 text-on-surface">
-                      Your Reset OTP Code: <span className="text-primary tracking-widest text-sm bg-surface-lowest px-2 py-0.5 rounded border border-primary/30">{generatedOTP}</span>
-                    </span>
-                  )}
+                  Password reset OTP sent to <strong>{resetEmail}</strong>. Please check your inbox.
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -381,10 +523,10 @@ const Login = ({ showToast, onLoginSuccess }) => {
                   <input
                     type="text"
                     maxLength={6}
-                    placeholder="Enter 6-digit OTP"
+                    placeholder="Enter 6-digit OTP code"
                     value={resetOTP}
-                    onChange={(e) => setResetOTP(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm font-mono font-bold text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all tracking-widest"
+                    onChange={(e) => setResetOTP(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-3 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm font-mono font-bold text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all tracking-[4px] text-center"
                     disabled={resetLoading}
                     required
                   />
