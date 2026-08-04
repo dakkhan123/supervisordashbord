@@ -27,6 +27,8 @@ import WorkerSidebar from './components/WorkerSidebar';
 import WorkerTopNav from './components/WorkerTopNav';
 import WorkerDashboard from './pages/worker/WorkerDashboard';
 import WorkerTasks from './pages/worker/WorkerTasks';
+import WorkerProgress from './pages/worker/WorkerProgress';
+import WorkerCompletionNotes from './pages/worker/WorkerCompletionNotes';
 import WorkerAttendance from './pages/worker/WorkerAttendance';
 import WorkerSalary from './pages/worker/WorkerSalary';
 import WorkerProfile from './pages/worker/WorkerProfile';
@@ -359,6 +361,22 @@ function AppContent() {
                 element={
                   <ProtectedRoute allowedRoles={['Worker']}>
                     <WorkerTasks showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/progress"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerProgress showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/worker/completion"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerCompletionNotes showToast={showToast} />
                   </ProtectedRoute>
                 }
               />
