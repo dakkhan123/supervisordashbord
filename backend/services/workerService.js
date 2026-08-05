@@ -3,6 +3,38 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 
 class WorkerService {
+  async checkNotSupervisor(id) {
+    let worker = await Worker.findById(id);
+    if (!worker) {
+      // Check if id is actually a User ID belonging to a Supervisor
+      const user = await User.findById(id);
+      if (user && user.role && user.role.toLowerCase() === 'supervisor') {
+        const error = new Error('Access denied: Cannot modify a supervisor account.');
+        error.statusCode = 403;
+        throw error;
+      }
+      const error = new Error('Worker not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (worker.role && worker.role.toLowerCase() === 'supervisor') {
+      const error = new Error('Access denied: Cannot modify a supervisor account.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (worker.user) {
+      const user = await User.findById(worker.user);
+      if (user && user.role && user.role.toLowerCase() === 'supervisor') {
+        const error = new Error('Access denied: Cannot modify a supervisor account.');
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+    return worker;
+  }
+
   async getAllWorkers(queryParams) {
     const { status, role } = queryParams || {};
     let query = {};
@@ -22,6 +54,13 @@ class WorkerService {
   }
 
   async createWorker(workerData) {
+    // If workerData attempts to set role to Supervisor, prevent privilege escalation
+    if (workerData.role && workerData.role.toLowerCase() === 'supervisor') {
+      const error = new Error('Access denied: Cannot create supervisor accounts via worker endpoints.');
+      error.statusCode = 403;
+      throw error;
+    }
+
     const worker = await Worker.create(workerData);
 
     // Generate User account if username or password provided, or auto-generate based on name
@@ -62,12 +101,7 @@ class WorkerService {
   }
 
   async updateWorker(id, workerData) {
-    const worker = await Worker.findById(id);
-    if (!worker) {
-      const error = new Error('Worker not found');
-      error.statusCode = 404;
-      throw error;
-    }
+    const worker = await this.checkNotSupervisor(id);
 
     Object.assign(worker, workerData);
     await worker.save();
@@ -121,12 +155,8 @@ class WorkerService {
   }
 
   async toggleWorkerStatus(id, status) {
-    const worker = await Worker.findById(id);
-    if (!worker) {
-      const error = new Error('Worker not found');
-      error.statusCode = 404;
-      throw error;
-    }
+    const worker = await this.checkNotSupervisor(id);
+
     worker.status = status;
     await worker.save();
 
@@ -139,12 +169,7 @@ class WorkerService {
   }
 
   async resetWorkerPassword(id, newPassword) {
-    const worker = await Worker.findById(id);
-    if (!worker) {
-      const error = new Error('Worker not found');
-      error.statusCode = 404;
-      throw error;
-    }
+    const worker = await this.checkNotSupervisor(id);
 
     const passToUse = (newPassword && newPassword.trim()) ? newPassword.trim() : 'Worker@123';
     const salt = await bcrypt.genSalt(10);
@@ -186,17 +211,11 @@ class WorkerService {
   }
 
   async deleteWorker(id) {
-    const worker = await Worker.findByIdAndDelete(id);
-    if (!worker) {
-      const error = new Error('Worker not found');
-      error.statusCode = 404;
-      throw error;
-    }
-    await User.deleteMany({ $or: [{ _id: worker.user }, { worker: id }] });
+    const worker = await this.checkNotSupervisor(id);
+    await Worker.findByIdAndDelete(worker._id);
+    await User.deleteMany({ $or: [{ _id: worker.user }, { worker: worker._id }] });
     return true;
   }
-
 }
 
 module.exports = new WorkerService();
-

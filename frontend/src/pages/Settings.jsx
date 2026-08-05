@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import UserAvatar, { getInitials } from '../components/UserAvatar';
@@ -227,20 +227,46 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
   const [editProfileData, setEditProfileData] = useState({});
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
-  // Load from localStorage or defaults
-  const [profile, setProfile] = useState(() => {
-    const saved = localStorage.getItem('smartops_profile');
-    return saved ? JSON.parse(saved) : {
-      name: 'Rajesh Kumar',
-      email: 'rajesh.kumar@smartops.co.in',
-      phone: '+91 98765 43210',
-      role: 'Supervisor',
-      unit: 'Unit Pune-A12',
-      address: 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057',
-      dateOfBirth: '1990-01-01',
-      dateOfJoining: '2024-01-15'
-    };
+  // Dynamic MongoDB User Profile
+  const [profile, setProfile] = useState({
+    name: user?.name || user?.username || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    role: user?.role || 'Supervisor',
+    unit: user?.unit || 'Unit Pune-A12',
+    address: user?.address || 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057',
+    dateOfBirth: '1990-01-01',
+    dateOfJoining: '2024-01-15'
   });
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  const fetchProfile = async () => {
+    try {
+      setProfileLoading(true);
+      const res = await api.getMe();
+      if (res.success && res.data) {
+        setProfile({
+          name: res.data.name || res.data.username || '',
+          email: res.data.email || '',
+          phone: res.data.phone || '',
+          role: res.data.role || 'Supervisor',
+          unit: res.data.unit || 'Unit Pune-A12',
+          address: res.data.address || 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057',
+          dateOfBirth: res.data.dateOfBirth || '1990-01-01',
+          dateOfJoining: res.data.dateOfJoining || '2024-01-15',
+          department: res.data.department || 'Operations'
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   const [thresholds, setThresholds] = useState(() => {
     const saved = localStorage.getItem('smartops_thresholds');
@@ -638,13 +664,13 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
               </button>
               <button 
                 className="btn btn-primary bg-primary text-white text-xs font-bold px-5 py-2.5 rounded-sm hover:bg-primary-container flex items-center gap-1.5 shadow"
-                onClick={() => {
+                onClick={async () => {
                   const { photoPreview, photoChanged, ...profileData } = editProfileData;
                   
-                  // Phone number validation: must be > 9 digits
+                  // Phone number validation: must be 10 numeric digits if provided
                   const numericPhone = profileData.phone ? profileData.phone.replace(/\D/g, '') : '';
-                  if (numericPhone.length <= 9) {
-                    showToast('Phone number must have more than 9 digits', 'error');
+                  if (numericPhone && numericPhone.length !== 10) {
+                    showToast('Mobile number must be exactly 10 numeric digits', 'error');
                     return;
                   }
 
@@ -659,22 +685,35 @@ const Settings = ({ showToast, notifications, onRefreshNotifications, user, onLo
                       showToast('Date of Birth cannot be in the future', 'error');
                       return;
                     }
-                  } else {
-                    showToast('Date of Birth is required', 'error');
-                    return;
                   }
 
-                  setProfile(profileData);
-                  saveSettings('profile', profileData);
-                  if (photoChanged) {
-                    updatePhoto(photoPreview);
-                    if (!photoPreview) {
-                      showToast('Profile photo removed', 'success');
+                  try {
+                    const payload = {
+                      name: profileData.name,
+                      email: profileData.email,
+                      phone: numericPhone,
+                      dateOfBirth: profileData.dateOfBirth,
+                      dateOfJoining: profileData.dateOfJoining,
+                      address: profileData.address,
+                      unit: profileData.unit,
+                      photo: photoChanged ? photoPreview : undefined
+                    };
+
+                    const res = await api.updateProfile(payload);
+                    if (res.success && res.data) {
+                      setProfile(res.data);
+                      showToast('Profile updated successfully!', 'success');
+                      if (photoChanged) {
+                        updatePhoto(photoPreview);
+                      }
+                      setIsEditProfileOpen(false);
                     } else {
-                      showToast('Profile photo updated', 'success');
+                      showToast(res.error || 'Failed to update profile', 'error');
                     }
+                  } catch (err) {
+                    console.error(err);
+                    showToast('Error saving profile changes', 'error');
                   }
-                  setIsEditProfileOpen(false);
                 }}
               >
                 Save Changes

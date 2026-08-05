@@ -501,13 +501,26 @@ class AuthController {
       const userRole = user.role || '';
       const isAuthorized = userRole.toLowerCase() === 'owner' || userRole.toLowerCase() === 'supervisor';
 
+      const profileName = user.name || (user.worker ? user.worker.name : user.username);
+      const profilePhone = user.phone || (user.worker ? user.worker.phone : '');
+      const profileDepartment = user.department || (user.worker ? user.worker.department : 'Operations');
+      const profileDateOfJoining = user.dateOfJoining || (user.worker ? user.worker.dateOfJoining : user.createdAt);
+
       res.status(200).json({
         success: true,
         data: {
           id: user._id,
+          name: profileName,
           username: user.username,
           email: user.email,
+          phone: profilePhone,
           role: user.role,
+          department: profileDepartment,
+          unit: user.unit || 'Unit Pune-A12',
+          address: user.address || 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057',
+          dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().split('T')[0] : '1990-01-01',
+          dateOfJoining: profileDateOfJoining ? new Date(profileDateOfJoining).toISOString().split('T')[0] : '2024-01-15',
+          photo: user.photo || null,
           status: user.status,
           isEmailVerified: user.isEmailVerified,
           worker: user.worker ? {
@@ -518,6 +531,101 @@ class AuthController {
             ...(isAuthorized ? { salary: user.worker.salary } : {}),
             status: user.worker.status
           } : null
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateProfile(req, res, next) {
+    try {
+      const requestedId = req.params.id;
+      const authenticatedId = req.user.id.toString();
+
+      // Authorization Check: A supervisor can ONLY edit their own profile
+      if (requestedId && requestedId.toString() !== authenticatedId) {
+        return res.status(403).json({
+          success: false,
+          error: "Forbidden: You are not authorized to edit another supervisor's profile."
+        });
+      }
+
+      const user = await User.findById(authenticatedId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User profile not found'
+        });
+      }
+
+      const { name, email, phone, dateOfBirth, dateOfJoining, address, unit, photo, department } = req.body;
+
+      if (phone !== undefined) {
+        const cleanPhone = phone.toString().replace(/\D/g, '');
+        if (cleanPhone && cleanPhone.length !== 10) {
+          return res.status(400).json({
+            success: false,
+            error: 'Mobile number must be exactly 10 numeric digits.'
+          });
+        }
+        user.phone = cleanPhone;
+      }
+
+      if (email !== undefined) {
+        const cleanEmail = email.toLowerCase().trim();
+        const existing = await User.findOne({ email: cleanEmail, _id: { $ne: user._id } });
+        if (existing) {
+          return res.status(400).json({
+            success: false,
+            error: 'Email address is already in use by another account.'
+          });
+        }
+        user.email = cleanEmail;
+      }
+
+      if (name !== undefined) user.name = name.trim();
+      if (dateOfBirth !== undefined && dateOfBirth) user.dateOfBirth = new Date(dateOfBirth);
+      if (dateOfJoining !== undefined && dateOfJoining) user.dateOfJoining = new Date(dateOfJoining);
+      if (address !== undefined) user.address = address.trim();
+      if (unit !== undefined) user.unit = unit.trim();
+      if (photo !== undefined) user.photo = photo;
+      if (department !== undefined) user.department = department.trim();
+
+      await user.save();
+
+      // Keep linked Worker document in sync if present
+      if (user.worker) {
+        const workerUpdate = {};
+        if (name !== undefined) workerUpdate.name = name.trim();
+        if (email !== undefined) workerUpdate.email = email.toLowerCase().trim();
+        if (phone !== undefined) workerUpdate.phone = user.phone;
+        if (department !== undefined) workerUpdate.department = department.trim();
+        if (dateOfJoining !== undefined && dateOfJoining) workerUpdate.dateOfJoining = new Date(dateOfJoining);
+        await Worker.findByIdAndUpdate(user.worker, workerUpdate);
+      }
+
+      const profileName = user.name || user.username;
+      const profilePhone = user.phone || '';
+      const profileDepartment = user.department || 'Operations';
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully!',
+        data: {
+          id: user._id,
+          name: profileName,
+          username: user.username,
+          email: user.email,
+          phone: profilePhone,
+          role: user.role,
+          department: profileDepartment,
+          unit: user.unit || 'Unit Pune-A12',
+          address: user.address || '',
+          dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().split('T')[0] : '',
+          dateOfJoining: user.dateOfJoining ? user.dateOfJoining.toISOString().split('T')[0] : '',
+          photo: user.photo || null,
+          status: user.status
         }
       });
     } catch (err) {

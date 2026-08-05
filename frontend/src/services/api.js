@@ -94,6 +94,14 @@ export const api = {
     return res.json();
   },
 
+  updateProfile: async (profileData) => {
+    const res = await authFetch(`${API_URL}/auth/profile`, {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    });
+    return res.json();
+  },
+
   // Inventory APIs
   getInventory: async (params) => {
     const query = buildQueryString(params);
