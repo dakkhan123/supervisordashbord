@@ -115,6 +115,42 @@ class WorkerController {
       next(err);
     }
   }
+
+  // Supervisor Pending Registration Methods
+  async getPendingRegistrations(req, res, next) {
+    try {
+      const pendingList = await workerService.getPendingRegistrations();
+      res.status(200).json({ success: true, count: pendingList.length, data: pendingList });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async approveRegistration(req, res, next) {
+    try {
+      const { salary } = req.body;
+      const result = await workerService.approveRegistration(req.params.id, salary);
+      res.status(200).json({ success: true, message: result.message, data: result });
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ success: false, error: err.message, message: err.message });
+      }
+      next(err);
+    }
+  }
+
+  async rejectRegistration(req, res, next) {
+    try {
+      const { rejectionReason } = req.body;
+      const result = await workerService.rejectRegistration(req.params.id, rejectionReason);
+      res.status(200).json({ success: true, message: result.message, data: result });
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ success: false, error: err.message, message: err.message });
+      }
+      next(err);
+    }
+  }
 }
 
 module.exports = new WorkerController();

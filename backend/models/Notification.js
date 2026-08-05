@@ -43,7 +43,10 @@ const NotificationSchema = new mongoose.Schema({
       'announcement',
       'approval',
       'attendance',
-      'salary'
+      'salary',
+      'leave_request',
+      'leave_approved',
+      'leave_rejected'
     ]
   },
   itemId: {

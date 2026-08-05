@@ -220,8 +220,168 @@ class WorkerService {
   async deleteWorker(id) {
     const worker = await this.checkNotSupervisor(id);
     await Worker.findByIdAndDelete(worker._id);
-    await User.deleteMany({ $or: [{ _id: worker.user }, { worker: worker._id }] });
-    return true;
+    if (worker.user) {
+      await User.findByIdAndDelete(worker.user);
+    }
+    return { message: 'Worker deleted successfully' };
+  }
+
+  // Pending Worker Registration Methods
+  async getPendingRegistrations() {
+    const PendingWorker = require('../models/PendingWorker');
+    return await PendingWorker.find({ status: 'Pending' }).sort({ createdAt: -1 });
+  }
+
+  async approveRegistration(pendingId, salary) {
+    const PendingWorker = require('../models/PendingWorker');
+    const emailService = require('../utils/emailService');
+
+    const numSalary = Number(salary);
+    if (isNaN(numSalary) || numSalary <= 0) {
+      const error = new Error('Monthly Salary is required and must be a positive number.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const pending = await PendingWorker.findById(pendingId);
+    if (!pending) {
+      const error = new Error('Pending worker registration request not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (pending.status !== 'Pending') {
+      const error = new Error(`Registration request is already ${pending.status}.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({
+      $or: [{ username: pending.username }, { email: pending.email }]
+    });
+
+    if (!user) {
+      user = await User.create({
+        username: pending.username,
+        email: pending.email,
+        password: pending.passwordHash,
+        phone: pending.mobile,
+        department: pending.department,
+        role: 'Worker',
+        status: 'Active',
+        isEmailVerified: true
+      });
+    } else {
+      user.status = 'Active';
+      user.role = 'Worker';
+      user.isEmailVerified = true;
+      user.password = pending.passwordHash;
+      await user.save();
+    }
+
+    // Create Worker Profile
+    let worker = await Worker.findOne({ $or: [{ user: user._id }, { email: pending.email }] });
+    if (!worker) {
+      worker = await Worker.create({
+        name: pending.fullName,
+        email: pending.email,
+        username: pending.username,
+        phone: pending.mobile,
+        salary: numSalary,
+        department: pending.department,
+        dateOfJoining: pending.joiningDate || new Date(),
+        dateOfBirth: pending.dateOfBirth,
+        address: pending.address || '',
+        photo: pending.photo || '',
+        status: 'Active',
+        user: user._id,
+        role: 'Worker'
+      });
+    } else {
+      worker.name = pending.fullName;
+      worker.salary = numSalary;
+      worker.department = pending.department;
+      worker.status = 'Active';
+      worker.user = user._id;
+      await worker.save();
+    }
+
+    user.worker = worker._id;
+    await user.save();
+
+    // Update PendingWorker Document
+    pending.status = 'Approved';
+    pending.salary = numSalary;
+    await pending.save();
+
+    // Dispatch Approval Email & Notification
+    try {
+      await emailService.sendRegistrationApprovedEmail(pending.email, pending.fullName, numSalary);
+    } catch (emailErr) {
+      console.error('Failed to send approval email:', emailErr);
+    }
+
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        user: user._id,
+        worker: worker._id,
+        title: '🎉 Worker Registration Approved!',
+        message: `Your registration request has been approved by your Supervisor. Assigned Monthly Salary: ₹${numSalary.toLocaleString('en-IN')}.`,
+        description: `Account Activated. You can now log in to the Worker Console.`,
+        type: 'approval',
+        itemId: worker._id.toString()
+      });
+    } catch (notifErr) {
+      console.error('Failed to create worker approval notification:', notifErr);
+    }
+
+    return {
+      message: 'Worker registration approved and activated successfully!',
+      user,
+      worker
+    };
+  }
+
+  async rejectRegistration(pendingId, rejectionReason) {
+    const PendingWorker = require('../models/PendingWorker');
+    const emailService = require('../utils/emailService');
+
+    if (!rejectionReason || !rejectionReason.trim()) {
+      const error = new Error('Supervisor comment/reason is mandatory when rejecting a worker registration request.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const pending = await PendingWorker.findById(pendingId);
+    if (!pending) {
+      const error = new Error('Pending worker registration request not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (pending.status !== 'Pending') {
+      const error = new Error(`Registration request is already ${pending.status}.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    pending.status = 'Rejected';
+    pending.rejectionReason = rejectionReason.trim();
+    await pending.save();
+
+    // Dispatch Rejection Email
+    try {
+      await emailService.sendRegistrationRejectedEmail(pending.email, pending.fullName, pending.rejectionReason);
+    } catch (emailErr) {
+      console.error('Failed to send rejection email:', emailErr);
+    }
+
+    return {
+      message: 'Worker registration request rejected.',
+      pending
+    };
   }
 }
 

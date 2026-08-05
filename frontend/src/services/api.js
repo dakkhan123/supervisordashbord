@@ -89,6 +89,63 @@ export const api = {
     return res.json();
   },
 
+  registerWorkerSendOTP: async (formData) => {
+    const res = await fetch(`${API_URL}/auth/register-worker/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    return res.json();
+  },
+
+  registerWorkerVerifyOTP: async (verifyData) => {
+    const res = await fetch(`${API_URL}/auth/register-worker/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(verifyData)
+    });
+    return res.json();
+  },
+
+  forgotPasswordSendOTP: async (email) => {
+    const res = await fetch(`${API_URL}/auth/forgot-password/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    return res.json();
+  },
+
+  forgotPasswordReset: async (resetData) => {
+    const res = await fetch(`${API_URL}/auth/forgot-password/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(resetData)
+    });
+    return res.json();
+  },
+
+  getPendingRegistrations: async () => {
+    const res = await authFetch(`${API_URL}/workers/pending-registrations`);
+    return res.json();
+  },
+
+  approveRegistration: async (id, salary) => {
+    const res = await authFetch(`${API_URL}/workers/pending-registrations/${id}/approve`, {
+      method: 'PUT',
+      body: JSON.stringify({ salary })
+    });
+    return res.json();
+  },
+
+  rejectRegistration: async (id, rejectionReason) => {
+    const res = await authFetch(`${API_URL}/workers/pending-registrations/${id}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify({ rejectionReason })
+    });
+    return res.json();
+  },
+
   getMe: async () => {
     const res = await authFetch(`${API_URL}/auth/me`);
     return res.json();
@@ -98,6 +155,48 @@ export const api = {
     const res = await authFetch(`${API_URL}/auth/profile`, {
       method: 'PUT',
       body: JSON.stringify(profileData)
+    });
+    return res.json();
+  },
+
+  // Leave & Half-Day Request APIs
+  createLeaveRequest: async (requestData) => {
+    const res = await authFetch(`${API_URL}/leave/request`, {
+      method: 'POST',
+      body: JSON.stringify(requestData)
+    });
+    return res.json();
+  },
+
+  getMyLeaveRequests: async () => {
+    const res = await authFetch(`${API_URL}/leave/my`);
+    return res.json();
+  },
+
+  getAllLeaveRequests: async () => {
+    const res = await authFetch(`${API_URL}/leave/all`);
+    return res.json();
+  },
+
+  approveLeaveRequest: async (id, comment) => {
+    const res = await authFetch(`${API_URL}/leave/${id}/approve`, {
+      method: 'PUT',
+      body: JSON.stringify({ comment })
+    });
+    return res.json();
+  },
+
+  rejectLeaveRequest: async (id, comment) => {
+    const res = await authFetch(`${API_URL}/leave/${id}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify({ comment })
+    });
+    return res.json();
+  },
+
+  cancelLeaveRequest: async (id) => {
+    const res = await authFetch(`${API_URL}/leave/${id}`, {
+      method: 'DELETE'
     });
     return res.json();
   },

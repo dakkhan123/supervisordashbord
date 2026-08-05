@@ -9,6 +9,7 @@ const WorkerSidebar = ({ mobileOpen, setMobileOpen, user, onLogout }) => {
     { name: 'Task Progress', path: '/worker/progress', icon: 'trending_up' },
     { name: 'Completion Notes', path: '/worker/completion', icon: 'note_alt' },
     { name: 'Attendance', path: '/worker/attendance', icon: 'calendar_today' },
+    { name: 'Leave Requests', path: '/worker/leave', icon: 'event_note' },
     { name: 'Salary & Earnings', path: '/worker/salary', icon: 'payments' },
     { name: 'Profile', path: '/worker/profile', icon: 'person' },
     { name: 'Settings', path: '/worker/settings', icon: 'settings' },

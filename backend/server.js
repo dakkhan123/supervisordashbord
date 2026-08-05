@@ -52,10 +52,12 @@ const salaryRouter = require('./routes/salary');
 const escalationsRouter = require('./routes/escalations');
 const performanceRouter = require('./routes/performance');
 const authRouter = require('./routes/auth');
+const leaveRouter = require('./routes/leave');
 const authMiddleware = require('./middleware/auth');
 
 // Mount Routers
 app.use('/api/auth', authRouter);
+app.use('/api/leave', authMiddleware, leaveRouter);
 app.use('/api/inventory', authMiddleware, inventoryRouter);
 app.use('/api/history', authMiddleware, historyRouter);
 app.use('/api/restock-requests', authMiddleware, restockRouter);

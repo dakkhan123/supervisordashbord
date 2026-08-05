@@ -14,10 +14,13 @@ import Settings from './pages/Settings';
 import ScanItemQR from './pages/ScanItemQR';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import WorkerRegister from './pages/WorkerRegister';
 import Tasks from './pages/Tasks';
 import Attendance from './pages/Attendance';
 import WorkerOverview from './pages/WorkerOverview';
+import WorkerRegistrationRequests from './pages/WorkerRegistrationRequests';
 import Salary from './pages/Salary';
+import LeaveRequests from './pages/LeaveRequests';
 import ProtectedRoute from './components/ProtectedRoute';
 import { api } from './services/api';
 import { io as socketIO } from 'socket.io-client';
@@ -30,6 +33,7 @@ import WorkerTasks from './pages/worker/WorkerTasks';
 import WorkerProgress from './pages/worker/WorkerProgress';
 import WorkerCompletionNotes from './pages/worker/WorkerCompletionNotes';
 import WorkerAttendance from './pages/worker/WorkerAttendance';
+import WorkerLeaveRequests from './pages/worker/WorkerLeaveRequests';
 import WorkerSalary from './pages/worker/WorkerSalary';
 import WorkerProfile from './pages/worker/WorkerProfile';
 
@@ -389,6 +393,14 @@ function AppContent() {
                 }
               />
               <Route
+                path="/worker/leave"
+                element={
+                  <ProtectedRoute allowedRoles={['Worker']}>
+                    <WorkerLeaveRequests showToast={showToast} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/worker/salary"
                 element={
                   <ProtectedRoute allowedRoles={['Worker']}>
@@ -452,6 +464,7 @@ function AppContent() {
     <Routes>
       <Route path="/login" element={<Login showToast={showToast} onLoginSuccess={(u) => setUser(u)} />} />
       <Route path="/register" element={<Register showToast={showToast} />} />
+      <Route path="/register-worker" element={<WorkerRegister showToast={showToast} />} />
 
       {/* Redirect any Worker URL requested by a Supervisor to Supervisor Dashboard */}
       <Route path="/worker/*" element={<Navigate to="/" replace />} />
@@ -585,12 +598,28 @@ function AppContent() {
                       } 
                     />
                     <Route 
+                      path="/leave-requests" 
+                      element={
+                        <LeaveRequests 
+                          showToast={showToast} 
+                        />
+                      } 
+                    />
+                    <Route 
                       path="/workers" 
                       element={
                         <WorkerOverview 
                           searchVal={searchVal}
                           showToast={showToast} 
                           user={user}
+                        />
+                      } 
+                    />
+                    <Route 
+                      path="/registration-requests" 
+                      element={
+                        <WorkerRegistrationRequests 
+                          showToast={showToast} 
                         />
                       } 
                     />

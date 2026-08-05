@@ -331,19 +331,17 @@ const Login = ({ showToast, onLoginSuccess }) => {
               <div className="flex items-center justify-between">
                 <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Password</label>
                 
-                {/* Forgot Password Link - ONLY visible on Supervisor Login page */}
-                {roleMode === 'supervisor' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotModalOpen(true);
-                      setResetStep(1);
-                    }}
-                    className="text-[11px] text-primary hover:underline font-extrabold cursor-pointer"
-                  >
-                    Forgot Password?
-                  </button>
-                )}
+                {/* Forgot Password Link - Available for both Supervisors and Workers */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotModalOpen(true);
+                    setResetStep(1);
+                  }}
+                  className="text-[11px] text-primary hover:underline font-extrabold cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
               </div>
 
               <div className="relative">
@@ -385,12 +383,15 @@ const Login = ({ showToast, onLoginSuccess }) => {
             <div className="text-center text-xs font-semibold text-outline">
               New Supervisor Registration:{' '}
               <Link to="/register" className="text-primary hover:underline font-bold">
-                Register Account
+                Register Console Account
               </Link>
             </div>
           ) : (
-            <div className="text-center text-xs text-outline font-medium">
-              Only Supervisor-created Worker accounts can log in. Contact your supervisor if you require password assistance.
+            <div className="text-center text-xs font-semibold text-outline">
+              New Worker Registration:{' '}
+              <Link to="/register-worker" className="text-primary hover:underline font-bold">
+                Apply for Worker Account
+              </Link>
             </div>
           )}
         </div>

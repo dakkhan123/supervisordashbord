@@ -4,17 +4,208 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const Worker = require('../models/Worker');
 const RegistrationOTP = require('../models/RegistrationOTP');
+const PendingWorker = require('../models/PendingWorker');
 const emailService = require('../utils/emailService');
 
 const hashOTP = (otp) => crypto.createHash('sha256').update(otp.trim()).digest('hex');
 
 class AuthController {
-  // Step 1: Supervisor Registration Request (Sends Email OTP)
+  // Worker Registration Step 1: Send Verification Email OTP
+  async registerWorkerSendOTP(req, res, next) {
+    try {
+      const { fullName, username, email, password, confirmPassword, mobile, dateOfBirth, address, joiningDate, department, photo } = req.body;
+
+      if (!fullName || !username || !email || !password || !mobile || !department) {
+        return res.status(400).json({
+          success: false,
+          error: 'Full Name, Username, Email, Password, Mobile Number, and Department are mandatory.'
+        });
+      }
+
+      if (confirmPassword && password !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password and Confirm Password do not match.'
+        });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please enter a valid email address format.'
+        });
+      }
+
+      const cleanMobile = mobile.toString().replace(/\D/g, '');
+      if (cleanMobile.length !== 10) {
+        return res.status(400).json({
+          success: false,
+          error: 'Mobile number must be exactly 10 numeric digits.'
+        });
+      }
+
+      const cleanUsername = username.toLowerCase().trim();
+      const cleanEmail = email.toLowerCase().trim();
+
+      // Check duplicate in User collection
+      const existingUser = await User.findOne({
+        $or: [{ username: cleanUsername }, { email: cleanEmail }]
+      });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          error: 'Username or Email address is already registered. Please log in or use another email.'
+        });
+      }
+
+      // Check duplicate in PendingWorker collection (Active or Pending)
+      const existingPending = await PendingWorker.findOne({
+        $or: [{ username: cleanUsername }, { email: cleanEmail }],
+        status: { $in: ['Pending', 'Approved'] }
+      });
+      if (existingPending) {
+        return res.status(400).json({
+          success: false,
+          error: 'A registration request with this Username or Email is already pending or approved.'
+        });
+      }
+
+      // Hash Password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      // Generate 6-Digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOTP = hashOTP(otp);
+
+      // Store in RegistrationOTP temp collection
+      await RegistrationOTP.deleteMany({ email: cleanEmail });
+      await RegistrationOTP.create({
+        name: fullName.trim(),
+        username: cleanUsername,
+        email: cleanEmail,
+        password: hashedPassword,
+        phone: cleanMobile,
+        role: 'Worker',
+        department: department.trim(),
+        dateOfJoining: joiningDate ? new Date(joiningDate) : new Date(),
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        address: address ? address.trim() : '',
+        photo: photo || '',
+        otpHash: hashedOTP,
+        lastSentAt: new Date()
+      });
+
+      // Dispatch Email OTP
+      await emailService.sendVerificationOTPEmail(cleanEmail, fullName.trim(), otp);
+
+      res.status(200).json({
+        success: true,
+        email: cleanEmail,
+        message: `Verification OTP sent to ${cleanEmail}. Please verify to submit registration.`
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // Worker Registration Step 2: Verify OTP & Create PendingWorker Request
+  async registerWorkerVerifyOTP(req, res, next) {
+    try {
+      const { email, otp } = req.body;
+      if (!email || !otp) {
+        return res.status(400).json({
+          success: false,
+          error: 'Email address and 6-digit OTP code are required.'
+        });
+      }
+
+      const cleanEmail = email.toLowerCase().trim();
+      const pendingOTP = await RegistrationOTP.findOne({ email: cleanEmail });
+
+      if (!pendingOTP) {
+        return res.status(400).json({
+          success: false,
+          error: 'OTP Expired or registration session not found. Please register again.'
+        });
+      }
+
+      const inputHash = hashOTP(otp);
+      if (inputHash !== pendingOTP.otpHash) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid OTP code. Please check and try again.'
+        });
+      }
+
+      // Remove any prior rejected pending records for this email/username
+      await PendingWorker.deleteMany({ email: cleanEmail });
+
+      // Create PendingWorker Document (Status = Pending)
+      const pendingWorker = await PendingWorker.create({
+        fullName: pendingOTP.name,
+        username: pendingOTP.username,
+        email: pendingOTP.email,
+        passwordHash: pendingOTP.password,
+        mobile: pendingOTP.phone,
+        dateOfBirth: pendingOTP.dateOfBirth,
+        address: pendingOTP.address,
+        department: pendingOTP.department,
+        joiningDate: pendingOTP.dateOfJoining,
+        photo: pendingOTP.photo,
+        status: 'Pending',
+        emailVerified: true
+      });
+
+      // Clear temp OTP record
+      await RegistrationOTP.deleteOne({ _id: pendingOTP._id });
+
+      // Send Registration Submitted Notification Email
+      try {
+        await emailService.sendRegistrationSubmittedEmail(cleanEmail, pendingWorker.fullName);
+      } catch (emailErr) {
+        console.error('Failed to send registration submitted email:', emailErr);
+      }
+
+      // Dispatch Real-Time Notification to Supervisors
+      try {
+        const Notification = require('../models/Notification');
+        const supervisors = await User.find({ role: { $in: ['Supervisor', 'Owner', 'Manager', 'Admin'] } });
+        const notifPromises = supervisors.map(sup =>
+          Notification.create({
+            user: sup._id,
+            title: `✉️ New Worker Registration Request`,
+            message: `${pendingWorker.fullName} (@${pendingWorker.username}) from ${pendingWorker.department} has submitted a registration request.`,
+            description: `New worker registration pending supervisor review & salary assignment.`,
+            type: 'approval',
+            itemId: pendingWorker._id.toString()
+          })
+        );
+        await Promise.all(notifPromises);
+      } catch (notifErr) {
+        console.error('Failed to send supervisor notification on worker registration:', notifErr);
+      }
+
+      res.status(201).json({
+        success: true,
+        message: 'Your registration has been submitted and is awaiting supervisor approval.',
+        data: {
+          id: pendingWorker._id,
+          fullName: pendingWorker.fullName,
+          status: pendingWorker.status
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // Supervisor Registration Request (Sends Email OTP)
   async register(req, res, next) {
     try {
       const { username, email, password, name, phone, role, dateOfJoining, department } = req.body;
 
-      // 1. Mandatory Fields Validation
       if (!username || !email || !password || !name) {
         return res.status(400).json({
           success: false,
@@ -26,11 +217,10 @@ class AuthController {
       if (!emailRegex.test(email)) {
         return res.status(400).json({
           success: false,
-          error: 'Please enter a valid email address format (e.g. user@example.com).'
+          error: 'Please enter a valid email address format.'
         });
       }
 
-      // 2. Mobile Number 10-Digit Validation
       if (phone && !/^\d{10}$/.test(phone.trim())) {
         return res.status(400).json({
           success: false,
@@ -41,7 +231,6 @@ class AuthController {
       const cleanUsername = username.toLowerCase().trim();
       const cleanEmail = email.toLowerCase().trim();
 
-      // 3. Duplicate Username / Email Check in User collection
       const existingUserByUsername = await User.findOne({ username: cleanUsername });
       if (existingUserByUsername) {
         return res.status(400).json({
@@ -59,16 +248,11 @@ class AuthController {
       }
 
       const normalizedRole = (role && role.toLowerCase() === 'worker') ? 'Worker' : 'Supervisor';
-
-      // 4. Hash password with bcrypt
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
-
-      // 5. Generate secure 6-digit OTP & Hash OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const hashedOTP = hashOTP(otp);
 
-      // 6. Save or update pending registration request with 10-min expiry
       await RegistrationOTP.deleteMany({ email: cleanEmail });
       await RegistrationOTP.create({
         name: name.trim(),
@@ -83,7 +267,6 @@ class AuthController {
         lastSentAt: new Date()
       });
 
-      // 7. Send OTP Email via Nodemailer
       await emailService.sendVerificationOTPEmail(cleanEmail, name.trim(), otp);
 
       res.status(200).json({
@@ -92,15 +275,11 @@ class AuthController {
         message: `Verification OTP sent to ${cleanEmail}. Please enter the 6-digit code to complete registration.`
       });
     } catch (err) {
-      if (err.name === 'ValidationError') {
-        const message = Object.values(err.errors).map(val => val.message).join(', ');
-        return res.status(400).json({ success: false, error: message });
-      }
       next(err);
     }
   }
 
-  // Step 2: Verify Registration OTP & Create Account
+  // Step 2: Verify Registration OTP & Create Supervisor Account
   async verifyRegistrationOTP(req, res, next) {
     try {
       const { email, otp } = req.body;
@@ -129,7 +308,6 @@ class AuthController {
         });
       }
 
-      // Check if username or email was registered in the meantime
       const checkUser = await User.findOne({
         $or: [{ username: pending.username }, { email: pending.email }]
       });
@@ -141,7 +319,50 @@ class AuthController {
         });
       }
 
-      // Create Worker Profile
+      // If worker role registration, DO NOT create active user or issue JWT! Create PendingWorker request.
+      if (pending.role && pending.role.toLowerCase() === 'worker') {
+        await PendingWorker.deleteMany({ email: cleanEmail });
+
+        const pendingWorker = await PendingWorker.create({
+          fullName: pending.name,
+          username: pending.username,
+          email: pending.email,
+          passwordHash: pending.password,
+          mobile: pending.phone || '',
+          department: pending.department || 'Operations',
+          joiningDate: pending.dateOfJoining || new Date(),
+          status: 'Pending',
+          emailVerified: true
+        });
+
+        await RegistrationOTP.deleteOne({ _id: pending._id });
+
+        try {
+          await emailService.sendRegistrationSubmittedEmail(cleanEmail, pendingWorker.fullName);
+        } catch (e) {}
+
+        try {
+          const Notification = require('../models/Notification');
+          const supervisors = await User.find({ role: { $in: ['Supervisor', 'Owner', 'Manager', 'Admin'] } });
+          const notifPromises = supervisors.map(sup =>
+            Notification.create({
+              user: sup._id,
+              title: `✉️ New Worker Registration Request`,
+              message: `${pendingWorker.fullName} (@${pendingWorker.username}) from ${pendingWorker.department} has submitted a registration request.`,
+              description: `Registration request awaiting supervisor review & salary assignment.`,
+              type: 'approval',
+              itemId: pendingWorker._id.toString()
+            })
+          );
+          await Promise.all(notifPromises);
+        } catch (e) {}
+
+        return res.status(201).json({
+          success: true,
+          message: 'Your registration has been submitted and is awaiting supervisor approval.'
+        });
+      }
+
       let worker = await Worker.findOne({ name: pending.name });
       if (!worker) {
         worker = await Worker.create({
@@ -160,7 +381,6 @@ class AuthController {
         await worker.save();
       }
 
-      // Create User Account with isEmailVerified: true
       const user = await User.create({
         username: pending.username,
         email: pending.email,
@@ -175,18 +395,13 @@ class AuthController {
 
       worker.user = user._id;
       await worker.save();
-
-      // Clear pending OTP record
       await RegistrationOTP.deleteOne({ _id: pending._id });
 
-      // Generate JWT Token
       const token = jwt.sign(
         { id: user._id, username: user.username, role: user.role, workerId: worker._id },
         process.env.JWT_SECRET || 'fallback_secret',
         { expiresIn: '30d' }
       );
-
-      const isAuthorized = pending.role === 'Supervisor' || pending.role === 'Owner';
 
       res.status(201).json({
         success: true,
@@ -197,16 +412,7 @@ class AuthController {
           username: user.username,
           email: user.email,
           role: user.role,
-          status: user.status,
-          isEmailVerified: user.isEmailVerified,
-          worker: {
-            id: worker._id,
-            name: worker.name,
-            phone: worker.phone,
-            role: worker.role,
-            ...(isAuthorized ? { salary: worker.salary } : {}),
-            status: worker.status
-          }
+          status: user.status
         }
       });
     } catch (err) {
@@ -214,56 +420,41 @@ class AuthController {
     }
   }
 
-  // Resend Registration OTP with 30s Cooldown
+  // Resend Registration OTP
   async resendRegistrationOTP(req, res, next) {
     try {
       const { email } = req.body;
       if (!email) {
-        return res.status(400).json({
-          success: false,
-          error: 'Please specify an email address.'
-        });
+        return res.status(400).json({ success: false, error: 'Please specify an email address.' });
       }
 
       const cleanEmail = email.toLowerCase().trim();
       const pending = await RegistrationOTP.findOne({ email: cleanEmail });
 
       if (!pending) {
-        return res.status(400).json({
-          success: false,
-          error: 'No pending registration found for this email. Please register again.'
-        });
+        return res.status(400).json({ success: false, error: 'No pending registration found for this email.' });
       }
 
-      // Check 30 seconds cooldown
       const secondsSinceLastSent = (Date.now() - new Date(pending.lastSentAt).getTime()) / 1000;
       if (secondsSinceLastSent < 30) {
         const remaining = Math.ceil(30 - secondsSinceLastSent);
-        return res.status(429).json({
-          success: false,
-          error: `Please wait ${remaining} seconds before requesting another OTP.`
-        });
+        return res.status(429).json({ success: false, error: `Please wait ${remaining} seconds before requesting another OTP.` });
       }
 
-      // Re-generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       pending.otpHash = hashOTP(otp);
       pending.lastSentAt = new Date();
       await pending.save();
 
-      // Send Email
       await emailService.sendVerificationOTPEmail(cleanEmail, pending.name, otp);
 
-      res.status(200).json({
-        success: true,
-        message: 'A new 6-digit OTP code has been sent to your email.'
-      });
+      res.status(200).json({ success: true, message: 'A new 6-digit OTP code has been sent to your email.' });
     } catch (err) {
       next(err);
     }
   }
 
-  // Login Controller with Email Verification Check
+  // Login Controller with Pending Worker & Active User Checks
   async login(req, res, next) {
     try {
       const { username, email, password } = req.body;
@@ -276,7 +467,27 @@ class AuthController {
         });
       }
 
-      // Find user by username OR email
+      // Check PendingWorker collection first
+      const pendingWorker = await PendingWorker.findOne({
+        $or: [{ username: identifier }, { email: identifier }]
+      });
+
+      if (pendingWorker) {
+        if (pendingWorker.status === 'Pending') {
+          return res.status(403).json({
+            success: false,
+            error: 'Your registration is pending supervisor approval.'
+          });
+        }
+        if (pendingWorker.status === 'Rejected') {
+          return res.status(403).json({
+            success: false,
+            error: 'Your registration request was rejected by supervisor.'
+          });
+        }
+      }
+
+      // Find user in User collection
       const user = await User.findOne({
         $or: [{ username: identifier }, { email: identifier }]
       }).populate('worker');
@@ -288,14 +499,15 @@ class AuthController {
         });
       }
 
-      if (user.status === 'Inactive') {
+      if (user.status !== 'Active') {
         return res.status(403).json({
           success: false,
-          error: 'Account is deactivated. Please contact administrator.'
+          error: user.status === 'Inactive'
+            ? 'Account is deactivated. Please contact administrator.'
+            : 'Your registration is pending supervisor approval.'
         });
       }
 
-      // Enforce Email Verification Check for Supervisors
       if (user.isEmailVerified === false) {
         return res.status(403).json({
           success: false,
@@ -315,35 +527,7 @@ class AuthController {
 
       let worker = user.worker;
       if (!worker) {
-        worker = await Worker.findOne({ $or: [{ user: user._id }, { name: new RegExp('^' + user.username + '$', 'i') }] });
-        if (!worker) {
-          worker = await Worker.create({
-            name: user.username,
-            email: user.email,
-            role: user.role || 'Supervisor',
-            salary: (user.role || 'Supervisor').toLowerCase() === 'supervisor' ? 28000 : 18000,
-            status: user.status || 'Active',
-            dateOfJoining: new Date(),
-            user: user._id
-          });
-        }
-        user.worker = worker._id;
-        if (!worker.user) {
-          worker.user = user._id;
-          await worker.save();
-        }
-      }
-
-      if (worker && worker.role) {
-        const workerRoleLower = worker.role.toLowerCase();
-        const userRoleLower = (user.role || '').toLowerCase();
-        if (workerRoleLower === 'worker' && userRoleLower !== 'worker') {
-          user.role = 'Worker';
-          await user.save();
-        } else if (workerRoleLower === 'supervisor' && userRoleLower !== 'supervisor' && userRoleLower !== 'owner') {
-          user.role = 'Supervisor';
-          await user.save();
-        }
+        worker = await Worker.findOne({ $or: [{ user: user._id }, { email: user.email }] });
       }
 
       const token = jwt.sign(
@@ -380,8 +564,8 @@ class AuthController {
     }
   }
 
-  // Forgot Password endpoint (ONLY for Supervisors)
-  async forgotPassword(req, res, next) {
+  // Send Forgot Password OTP (For Workers & Supervisors)
+  async forgotPasswordSendOTP(req, res, next) {
     try {
       const { email } = req.body;
       if (!email || !email.trim()) {
@@ -401,26 +585,18 @@ class AuthController {
         });
       }
 
-      // Restrict Forgot Password to Supervisor / Owner accounts ONLY
-      const userRole = (user.role || '').toLowerCase();
-      if (userRole === 'worker') {
-        return res.status(403).json({
-          success: false,
-          error: 'Forgot Password option is restricted to Supervisor accounts. Worker accounts must contact their supervisor for password resets.'
-        });
-      }
-
-      // Generate 6-digit OTP & Hash it before saving
+      // Generate 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       user.resetPasswordOTP = hashOTP(otp);
       user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000; // 10 minutes validity
       await user.save();
 
-      // Send Real Password Reset Email via Nodemailer
-      await emailService.sendPasswordResetEmail(cleanEmail, user.username, otp);
+      // Dispatch Email
+      await emailService.sendPasswordResetEmail(cleanEmail, user.name || user.username, otp);
 
       res.status(200).json({
         success: true,
+        email: cleanEmail,
         message: 'Password reset OTP sent to your registered email address.'
       });
     } catch (err) {
@@ -428,14 +604,21 @@ class AuthController {
     }
   }
 
-  // Reset Password endpoint with OTP
-  async resetPassword(req, res, next) {
+  // Reset Password via OTP (For Workers & Supervisors)
+  async forgotPasswordReset(req, res, next) {
     try {
-      const { email, otp, newPassword } = req.body;
+      const { email, otp, newPassword, confirmPassword } = req.body;
       if (!email || !otp || !newPassword) {
         return res.status(400).json({
           success: false,
           error: 'Email, OTP code, and new password are required.'
+        });
+      }
+
+      if (confirmPassword && newPassword !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'New password and confirm password do not match.'
         });
       }
 
@@ -449,7 +632,6 @@ class AuthController {
       const cleanEmail = email.toLowerCase().trim();
       const hashedInputOTP = hashOTP(otp);
 
-      // Search for matching user with unexpired reset OTP
       const user = await User.findOne({
         email: cleanEmail,
         $or: [{ resetPasswordOTP: hashedInputOTP }, { resetPasswordOTP: otp.trim() }],
@@ -459,24 +641,44 @@ class AuthController {
       if (!user) {
         return res.status(400).json({
           success: false,
-          error: 'OTP Expired. Please resend.'
+          error: 'OTP code is invalid or has expired. Please request a new OTP.'
         });
       }
 
-      // Hash new password using bcrypt
       const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(newPassword.trim(), salt);
+      const hashedPassword = await bcrypt.hash(newPassword.trim(), salt);
+
+      user.password = hashedPassword;
       user.resetPasswordOTP = undefined;
       user.resetPasswordOTPExpire = undefined;
       await user.save();
 
+      // Update PendingWorker record if present
+      await PendingWorker.updateMany({ email: cleanEmail }, { passwordHash: hashedPassword });
+
+      // Dispatch confirmation email
+      try {
+        await emailService.sendPasswordChangedEmail(cleanEmail, user.name || user.username);
+      } catch (emailErr) {
+        console.error('Failed to send password changed email:', emailErr);
+      }
+
       res.status(200).json({
         success: true,
-        message: 'Password updated successfully! You can now sign in with your new password.'
+        message: 'Password updated successfully! You can now log in with your new password.'
       });
     } catch (err) {
       next(err);
     }
+  }
+
+  // Legacy alias helpers
+  async forgotPassword(req, res, next) {
+    return this.forgotPasswordSendOTP(req, res, next);
+  }
+
+  async resetPassword(req, res, next) {
+    return this.forgotPasswordReset(req, res, next);
   }
 
   async getMe(req, res, next) {

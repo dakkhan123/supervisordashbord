@@ -221,6 +221,134 @@ class EmailService {
       throw err; // Re-throw to prevent fake success response
     }
   }
+
+  async sendRegistrationSubmittedEmail(toEmail, recipientName) {
+    const transporter = this.getTransporter();
+    const fromHeader = process.env.EMAIL_FROM
+      ? process.env.EMAIL_FROM.trim()
+      : `"SmartOps System" <${process.env.EMAIL_USER.trim()}>`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: sans-serif; background-color: #0b1727; padding: 20px; color: #f8fafc;">
+        <div style="max-width: 550px; margin: 0 auto; background: #17263c; border-radius: 12px; padding: 30px; border: 1px solid #2d3f58;">
+          <h2 style="color: #0d9488; margin-top: 0;">Registration Submitted Successfully</h2>
+          <p>Hello <strong>${recipientName}</strong>,</p>
+          <p>Your SmartOps Worker Registration request has been submitted successfully after email verification.</p>
+          <p style="background: #0f172a; padding: 15px; border-radius: 8px; border-left: 4px solid #0d9488; color: #cbd5e1;">
+            ⏳ <strong>Current Status: Pending Supervisor Approval</strong><br/>
+            Your application is undergoing supervisor review. You will receive an email notification as soon as your account is activated.
+          </p>
+          <p style="color: #64748b; font-size: 12px; margin-top: 20px;">SmartOps Enterprise Operations Portal</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return await transporter.sendMail({
+      from: fromHeader,
+      to: toEmail,
+      subject: 'SmartOps — Worker Registration Submitted',
+      html: htmlContent
+    });
+  }
+
+  async sendRegistrationApprovedEmail(toEmail, recipientName, salary) {
+    const transporter = this.getTransporter();
+    const fromHeader = process.env.EMAIL_FROM
+      ? process.env.EMAIL_FROM.trim()
+      : `"SmartOps System" <${process.env.EMAIL_USER.trim()}>`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: sans-serif; background-color: #0b1727; padding: 20px; color: #f8fafc;">
+        <div style="max-width: 550px; margin: 0 auto; background: #17263c; border-radius: 12px; padding: 30px; border: 1px solid #2d3f58;">
+          <h2 style="color: #22c55e; margin-top: 0;">🎉 Registration Approved!</h2>
+          <p>Hello <strong>${recipientName}</strong>,</p>
+          <p>Great news! Your SmartOps Worker Account registration has been approved by your Supervisor.</p>
+          <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #22c55e; margin: 20px 0;">
+            <p style="margin: 0; color: #22c55e; font-weight: bold;">Status: Active</p>
+            <p style="margin: 5px 0 0 0; color: #cbd5e1;">Assigned Salary: <strong>₹${salary ? salary.toLocaleString('en-IN') : 'N/A'}/month</strong></p>
+          </div>
+          <p>You can now log in to the Worker Console using your registered username/email and password.</p>
+          <p style="color: #64748b; font-size: 12px; margin-top: 20px;">SmartOps Enterprise Operations Portal</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return await transporter.sendMail({
+      from: fromHeader,
+      to: toEmail,
+      subject: 'SmartOps — Worker Registration Approved!',
+      html: htmlContent
+    });
+  }
+
+  async sendRegistrationRejectedEmail(toEmail, recipientName, rejectionReason) {
+    const transporter = this.getTransporter();
+    const fromHeader = process.env.EMAIL_FROM
+      ? process.env.EMAIL_FROM.trim()
+      : `"SmartOps System" <${process.env.EMAIL_USER.trim()}>`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: sans-serif; background-color: #0b1727; padding: 20px; color: #f8fafc;">
+        <div style="max-width: 550px; margin: 0 auto; background: #17263c; border-radius: 12px; padding: 30px; border: 1px solid #2d3f58;">
+          <h2 style="color: #ef4444; margin-top: 0;">Registration Request Update</h2>
+          <p>Hello <strong>${recipientName}</strong>,</p>
+          <p>Your registration request for SmartOps Worker Console was reviewed by the supervisor and was <strong>not approved</strong> at this time.</p>
+          ${rejectionReason ? `<div style="background: #0f172a; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444; color: #f87171; margin: 15px 0;"><strong>Reason:</strong> ${rejectionReason}</div>` : ''}
+          <p style="color: #94a3b8;">Please contact system administration if you believe this was an error.</p>
+          <p style="color: #64748b; font-size: 12px; margin-top: 20px;">SmartOps Enterprise Operations Portal</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return await transporter.sendMail({
+      from: fromHeader,
+      to: toEmail,
+      subject: 'SmartOps — Worker Registration Request Status',
+      html: htmlContent
+    });
+  }
+
+  async sendPasswordChangedEmail(toEmail, recipientName) {
+    const transporter = this.getTransporter();
+    const fromHeader = process.env.EMAIL_FROM
+      ? process.env.EMAIL_FROM.trim()
+      : `"SmartOps Security" <${process.env.EMAIL_USER.trim()}>`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: sans-serif; background-color: #0b1727; padding: 20px; color: #f8fafc;">
+        <div style="max-width: 550px; margin: 0 auto; background: #17263c; border-radius: 12px; padding: 30px; border: 1px solid #2d3f58;">
+          <h2 style="color: #3b82f6; margin-top: 0;">Password Successfully Reset</h2>
+          <p>Hello <strong>${recipientName}</strong>,</p>
+          <p>Your password for your SmartOps account has been updated successfully via OTP verification.</p>
+          <p style="color: #94a3b8;">If you did not make this change, please contact support or reset your password immediately.</p>
+          <p style="color: #64748b; font-size: 12px; margin-top: 20px;">SmartOps Security Team</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return await transporter.sendMail({
+      from: fromHeader,
+      to: toEmail,
+      subject: 'SmartOps — Password Security Notice',
+      html: htmlContent
+    });
+  }
 }
 
 module.exports = new EmailService();

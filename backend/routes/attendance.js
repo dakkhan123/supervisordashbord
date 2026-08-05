@@ -24,6 +24,10 @@ attendanceRouter.route('/:id')
 
 
 const workersRouter = express.Router();
+workersRouter.get('/pending-registrations', workerController.getPendingRegistrations);
+workersRouter.put('/pending-registrations/:id/approve', workerController.approveRegistration);
+workersRouter.put('/pending-registrations/:id/reject', workerController.rejectRegistration);
+
 workersRouter.route('/')
   .get(workerController.getAllWorkers)
   .post(workerController.createWorker);
