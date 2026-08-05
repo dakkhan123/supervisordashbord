@@ -36,21 +36,28 @@ class WorkerService {
   }
 
   async getAllWorkers(queryParams) {
-    const { status, role } = queryParams || {};
-    let query = {};
-    if (status) query.status = status;
-    if (role) query.role = role;
-    return await Worker.find(query).populate('user', 'username email status').sort({ createdAt: -1 });
+    const { status } = queryParams || {};
+    // Strict Filter: Workers API MUST ONLY return records with role = 'Worker'
+    // Exclude all Supervisor, Admin, Owner, and Manager accounts
+    let query = {
+      role: { $nin: ['Supervisor', 'Admin', 'Owner', 'Manager'] }
+    };
+    if (status && status !== 'All') {
+      query.status = status;
+    }
+    const workers = await Worker.find(query).populate('user', 'username email status role').sort({ createdAt: -1 });
+
+    // Secondary Filter: Ensure linked user accounts are also not Supervisors
+    return workers.filter(w => {
+      const isWorkerRole = !w.role || w.role.toLowerCase() === 'worker';
+      const isUserNotSupervisor = !w.user || !w.user.role || w.user.role.toLowerCase() === 'worker';
+      return isWorkerRole && isUserNotSupervisor;
+    });
   }
 
   async getWorkerById(id) {
-    const worker = await Worker.findById(id).populate('user', 'username email status');
-    if (!worker) {
-      const error = new Error('Worker not found');
-      error.statusCode = 404;
-      throw error;
-    }
-    return worker;
+    const worker = await this.checkNotSupervisor(id);
+    return await Worker.findById(worker._id).populate('user', 'username email status role');
   }
 
   async createWorker(workerData) {
