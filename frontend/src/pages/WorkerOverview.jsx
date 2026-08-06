@@ -281,13 +281,20 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  // Filter & Search matching workers (Strictly Workers ONLY)
+  // Get unique roles from workers (excluding Supervisor/Admin to align with staff list)
+  const uniqueRoles = ['All', ...new Set(workers
+    .map(w => w.role)
+    .filter(role => role && role !== 'Supervisor' && role !== 'Admin')
+  )];
+
+  // Filter & Search matching workers
   const filteredWorkers = workers.filter(w => {
     const isWorker = !w.role || w.role.toLowerCase() === 'worker';
     const isNotSupervisor = w.role !== 'Supervisor' && w.user?.role !== 'Supervisor';
     const matchesSearch = !searchVal || w.name.toLowerCase().includes(searchVal.toLowerCase());
     const matchesStatus = statusFilter === 'All' || w.status === statusFilter;
-    return isWorker && isNotSupervisor && matchesSearch && matchesStatus;
+    const matchesRole = roleFilter === 'All' || w.role === roleFilter;
+    return isWorker && isNotSupervisor && matchesSearch && matchesStatus && matchesRole;
   });
 
   // Calculate Selected Worker data
@@ -385,11 +392,15 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                 <div className="flex-1 min-w-0">
                   <label className="text-[9px] font-bold text-outline uppercase">Role</label>
                   <select
-                    value="Worker"
-                    disabled
-                    className="w-full mt-0.5 px-2 py-1.5 bg-surface-low border border-outline-variant rounded-sm text-[11px] text-on-surface font-semibold outline-none opacity-80 cursor-not-allowed"
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="w-full mt-0.5 px-2 py-1.5 bg-surface-low border border-outline-variant rounded-sm text-[11px] text-on-surface font-semibold outline-none cursor-pointer"
                   >
-                    <option value="Worker">Worker</option>
+                    {uniqueRoles.map(role => (
+                      <option key={role} value={role}>
+                        {role === 'All' ? 'All Roles' : role}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex-1 min-w-0">
