@@ -8,7 +8,7 @@ class AttendanceController {
         const records = await attendanceService.getMyAttendance(workerId, req.query);
         return res.status(200).json({ success: true, count: records.length, data: records });
       }
-      const records = await attendanceService.getAllAttendance(req.query);
+      const records = await attendanceService.getAllAttendance(req.query, req.user);
       res.status(200).json({ success: true, count: records.length, data: records });
     } catch (err) {
       next(err);
@@ -41,9 +41,12 @@ class AttendanceController {
       if (!isAuthorized) {
         return res.status(403).json({ success: false, error: 'Only Supervisors can record attendance' });
       }
-      const record = await attendanceService.createAttendance(req.body);
+      const record = await attendanceService.createAttendance(req.body, req.user);
       res.status(201).json({ success: true, data: record });
     } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ success: false, error: err.message, message: err.message });
+      }
       next(err);
     }
   }
@@ -55,18 +58,24 @@ class AttendanceController {
       if (!isAuthorized) {
         return res.status(403).json({ success: false, error: 'Only Supervisors can modify attendance' });
       }
-      const record = await attendanceService.updateAttendance(req.params.id, req.body);
+      const record = await attendanceService.updateAttendance(req.params.id, req.body, req.user);
       res.status(200).json({ success: true, data: record });
     } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ success: false, error: err.message, message: err.message });
+      }
       next(err);
     }
   }
 
   async deleteAttendance(req, res, next) {
     try {
-      await attendanceService.deleteAttendance(req.params.id);
+      await attendanceService.deleteAttendance(req.params.id, req.user);
       res.status(200).json({ success: true, data: {} });
     } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ success: false, error: err.message, message: err.message });
+      }
       next(err);
     }
   }

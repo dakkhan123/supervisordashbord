@@ -7,7 +7,7 @@
     "dev": "npm run dev:all",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:server": "node backend/server.js",
-    "dev:all": "concurrently --kill-others-on-fail --names \"SERVER,FRONTEND\" --prefix-colors \"yellow,cyan\" \"npm run dev:server\" \"npm run dev:frontend\"",
+    "dev:all": "npx concurrently --kill-others-on-fail --names \"SERVER,FRONTEND\" --prefix-colors \"yellow,cyan\" \"npm run dev:server\" \"npm run dev:frontend\"",
     "start": "node scripts/startup.js",
     "build": "npm run build --prefix frontend",
     "lint": "npm run lint --prefix frontend",

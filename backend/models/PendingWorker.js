@@ -40,6 +40,11 @@ const PendingWorkerSchema = new mongoose.Schema({
     required: [true, 'Department is required'],
     trim: true
   },
+  branch: {
+    type: String,
+    default: 'Pune Head Office',
+    trim: true
+  },
   joiningDate: {
     type: Date,
     default: Date.now

@@ -35,17 +35,37 @@ class WorkerService {
     return worker;
   }
 
-  async getAllWorkers(queryParams) {
+  async getBranchForUser(requestingUser) {
+    if (!requestingUser) return 'Pune Head Office';
+    if (requestingUser.branch) return requestingUser.branch;
+    if (requestingUser.unit) return requestingUser.unit;
+    if (requestingUser.id || requestingUser._id) {
+      const u = await User.findById(requestingUser.id || requestingUser._id);
+      if (u && (u.branch || u.unit)) return u.branch || u.unit;
+    }
+    return 'Pune Head Office';
+  }
+
+  async getAllWorkers(queryParams, requestingUser) {
     const { status } = queryParams || {};
     // Strict Filter: Workers API MUST ONLY return records with role = 'Worker'
     // Exclude all Supervisor, Admin, Owner, and Manager accounts
     let query = {
       role: { $nin: ['Supervisor', 'Admin', 'Owner', 'Manager'] }
     };
+
+    if (requestingUser) {
+      const roleLower = (requestingUser.role || '').toLowerCase();
+      if (roleLower === 'supervisor' || roleLower === 'manager') {
+        const userBranch = await this.getBranchForUser(requestingUser);
+        query.$or = [{ branch: userBranch }, { assignedSite: userBranch }];
+      }
+    }
+
     if (status && status !== 'All') {
       query.status = status;
     }
-    const workers = await Worker.find(query).populate('user', 'username email status role').sort({ createdAt: -1 });
+    const workers = await Worker.find(query).populate('user', 'username email status role branch unit').sort({ createdAt: -1 });
 
     // Secondary Filter: Ensure linked user accounts are also not Supervisors
     return workers.filter(w => {
@@ -227,12 +247,22 @@ class WorkerService {
   }
 
   // Pending Worker Registration Methods
-  async getPendingRegistrations() {
+  async getPendingRegistrations(requestingUser) {
     const PendingWorker = require('../models/PendingWorker');
-    return await PendingWorker.find({ status: 'Pending' }).sort({ createdAt: -1 });
+    let query = { status: 'Pending' };
+
+    if (requestingUser) {
+      const roleLower = (requestingUser.role || '').toLowerCase();
+      if (roleLower === 'supervisor' || roleLower === 'manager') {
+        const userBranch = await this.getBranchForUser(requestingUser);
+        query.branch = userBranch;
+      }
+    }
+
+    return await PendingWorker.find(query).sort({ createdAt: -1 });
   }
 
-  async approveRegistration(pendingId, salary) {
+  async approveRegistration(pendingId, salary, requestingUser) {
     const PendingWorker = require('../models/PendingWorker');
     const emailService = require('../utils/emailService');
 
@@ -250,11 +280,26 @@ class WorkerService {
       throw error;
     }
 
+    if (requestingUser) {
+      const roleLower = (requestingUser.role || '').toLowerCase();
+      if (roleLower === 'supervisor' || roleLower === 'manager') {
+        const userBranch = await this.getBranchForUser(requestingUser);
+        const pendingBranch = pending.branch || 'Pune Head Office';
+        if (userBranch !== pendingBranch) {
+          const error = new Error('Access Denied: You can only approve worker registration requests for your assigned branch.');
+          error.statusCode = 403;
+          throw error;
+        }
+      }
+    }
+
     if (pending.status !== 'Pending') {
       const error = new Error(`Registration request is already ${pending.status}.`);
       error.statusCode = 400;
       throw error;
     }
+
+    const targetBranch = pending.branch || 'Pune Head Office';
 
     // Check if user already exists
     let user = await User.findOne({
@@ -268,6 +313,8 @@ class WorkerService {
         password: pending.passwordHash,
         phone: pending.mobile,
         department: pending.department,
+        branch: targetBranch,
+        unit: targetBranch,
         role: 'Worker',
         status: 'Active',
         isEmailVerified: true
@@ -275,6 +322,8 @@ class WorkerService {
     } else {
       user.status = 'Active';
       user.role = 'Worker';
+      user.branch = targetBranch;
+      user.unit = targetBranch;
       user.isEmailVerified = true;
       user.password = pending.passwordHash;
       await user.save();
@@ -290,6 +339,8 @@ class WorkerService {
         phone: pending.mobile,
         salary: numSalary,
         department: pending.department,
+        branch: targetBranch,
+        assignedSite: targetBranch,
         dateOfJoining: pending.joiningDate || new Date(),
         dateOfBirth: pending.dateOfBirth,
         address: pending.address || '',
@@ -302,6 +353,8 @@ class WorkerService {
       worker.name = pending.fullName;
       worker.salary = numSalary;
       worker.department = pending.department;
+      worker.branch = targetBranch;
+      worker.assignedSite = targetBranch;
       worker.status = 'Active';
       worker.user = user._id;
       await worker.save();
@@ -344,7 +397,7 @@ class WorkerService {
     };
   }
 
-  async rejectRegistration(pendingId, rejectionReason) {
+  async rejectRegistration(pendingId, rejectionReason, requestingUser) {
     const PendingWorker = require('../models/PendingWorker');
     const emailService = require('../utils/emailService');
 
@@ -359,6 +412,19 @@ class WorkerService {
       const error = new Error('Pending worker registration request not found.');
       error.statusCode = 404;
       throw error;
+    }
+
+    if (requestingUser) {
+      const roleLower = (requestingUser.role || '').toLowerCase();
+      if (roleLower === 'supervisor' || roleLower === 'manager') {
+        const userBranch = await this.getBranchForUser(requestingUser);
+        const pendingBranch = pending.branch || 'Pune Head Office';
+        if (userBranch !== pendingBranch) {
+          const error = new Error('Access Denied: You can only reject worker registration requests for your assigned branch.');
+          error.statusCode = 403;
+          throw error;
+        }
+      }
     }
 
     if (pending.status !== 'Pending') {

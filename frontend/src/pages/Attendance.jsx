@@ -741,23 +741,40 @@ const Attendance = ({ showToast }) => {
                                   >
                                     <span className="material-symbols-outlined text-[16px]">visibility</span>
                                   </button>
-                                  <button
-                                    onClick={() => {
-                                      setEditRecord(h);
-                                      setShowEditModal(true);
-                                    }}
-                                    className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors cursor-pointer"
-                                    title="Edit Log"
-                                  >
-                                    <span className="material-symbols-outlined text-[16px]">edit</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteRecord(h._id)}
-                                    className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-error transition-colors cursor-pointer"
-                                    title="Delete Log"
-                                  >
-                                    <span className="material-symbols-outlined text-[16px]">delete</span>
-                                  </button>
+                                  {(() => {
+                                    const roleStr = (h.role || h.worker?.role || h.worker?.user?.role || '').toLowerCase();
+                                    const isTargetSupervisor = roleStr === 'supervisor' || roleStr === 'admin' || roleStr === 'owner' || roleStr === 'manager';
+                                    const isSelf = h.worker?.user === currentUser?.id || h.user === currentUser?.id;
+                                    
+                                    if (isTargetSupervisor || isSelf) {
+                                      return (
+                                        <span className="text-[10px] font-bold text-outline uppercase bg-surface-low px-2 py-0.5 rounded border border-outline-variant/40" title="Supervisor attendance is Read-Only">
+                                          Read-Only
+                                        </span>
+                                      );
+                                    }
+                                    return (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setEditRecord(h);
+                                            setShowEditModal(true);
+                                          }}
+                                          className="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors cursor-pointer"
+                                          title="Edit Log"
+                                        >
+                                          <span className="material-symbols-outlined text-[16px]">edit</span>
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteRecord(h._id)}
+                                          className="w-7 h-7 rounded hover:bg-error/10 text-error flex items-center justify-center transition-colors cursor-pointer"
+                                          title="Delete Log"
+                                        >
+                                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                                        </button>
+                                      </>
+                                    );
+                                  })()}
                                 </div>
                               </td>
                             )}

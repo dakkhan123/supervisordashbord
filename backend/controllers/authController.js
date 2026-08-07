@@ -13,12 +13,12 @@ class AuthController {
   // Worker Registration Step 1: Send Verification Email OTP
   async registerWorkerSendOTP(req, res, next) {
     try {
-      const { fullName, username, email, password, confirmPassword, mobile, dateOfBirth, address, joiningDate, department, photo } = req.body;
+      const { fullName, username, email, password, confirmPassword, mobile, dateOfBirth, address, joiningDate, department, branch, photo } = req.body;
 
-      if (!fullName || !username || !email || !password || !mobile || !department) {
+      if (!fullName || !username || !email || !password || !mobile || !department || !branch) {
         return res.status(400).json({
           success: false,
-          error: 'Full Name, Username, Email, Password, Mobile Number, and Department are mandatory.'
+          error: 'Full Name, Username, Email, Password, Mobile Number, Department, and Branch / Office are mandatory.'
         });
       }
 
@@ -47,6 +47,7 @@ class AuthController {
 
       const cleanUsername = username.toLowerCase().trim();
       const cleanEmail = email.toLowerCase().trim();
+      const cleanBranch = branch.trim();
 
       // Check duplicate in User collection
       const existingUser = await User.findOne({
@@ -89,6 +90,7 @@ class AuthController {
         phone: cleanMobile,
         role: 'Worker',
         department: department.trim(),
+        branch: cleanBranch,
         dateOfJoining: joiningDate ? new Date(joiningDate) : new Date(),
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
         address: address ? address.trim() : '',
@@ -152,6 +154,7 @@ class AuthController {
         dateOfBirth: pendingOTP.dateOfBirth,
         address: pendingOTP.address,
         department: pendingOTP.department,
+        branch: pendingOTP.branch || 'Pune Head Office',
         joiningDate: pendingOTP.dateOfJoining,
         photo: pendingOTP.photo,
         status: 'Pending',
@@ -168,15 +171,23 @@ class AuthController {
         console.error('Failed to send registration submitted email:', emailErr);
       }
 
-      // Dispatch Real-Time Notification to Supervisors
+      // Dispatch Real-Time Notification ONLY to Supervisors of the SAME Branch (or Owners/Admins)
       try {
         const Notification = require('../models/Notification');
-        const supervisors = await User.find({ role: { $in: ['Supervisor', 'Owner', 'Manager', 'Admin'] } });
+        const targetBranch = pendingWorker.branch || 'Pune Head Office';
+        const supervisors = await User.find({
+          role: { $in: ['Supervisor', 'Owner', 'Manager', 'Admin'] },
+          $or: [
+            { branch: targetBranch },
+            { unit: targetBranch },
+            { role: { $in: ['Owner', 'Admin'] } }
+          ]
+        });
         const notifPromises = supervisors.map(sup =>
           Notification.create({
             user: sup._id,
             title: `✉️ New Worker Registration Request`,
-            message: `${pendingWorker.fullName} (@${pendingWorker.username}) from ${pendingWorker.department} has submitted a registration request.`,
+            message: `${pendingWorker.fullName} (@${pendingWorker.username}) from ${pendingWorker.branch || pendingWorker.department} has submitted a registration request.`,
             description: `New worker registration pending supervisor review & salary assignment.`,
             type: 'approval',
             itemId: pendingWorker._id.toString()
@@ -193,6 +204,7 @@ class AuthController {
         data: {
           id: pendingWorker._id,
           fullName: pendingWorker.fullName,
+          branch: pendingWorker.branch,
           status: pendingWorker.status
         }
       });
@@ -204,12 +216,12 @@ class AuthController {
   // Supervisor Registration Request (Sends Email OTP)
   async register(req, res, next) {
     try {
-      const { username, email, password, name, phone, role, dateOfJoining, department } = req.body;
+      const { username, email, password, name, phone, role, dateOfJoining, department, branch } = req.body;
 
-      if (!username || !email || !password || !name) {
+      if (!username || !email || !password || !name || !branch) {
         return res.status(400).json({
           success: false,
-          error: 'Username, email, password, and full name are mandatory fields.'
+          error: 'Username, email, password, full name, and Branch / Office are mandatory fields.'
         });
       }
 
@@ -230,6 +242,7 @@ class AuthController {
 
       const cleanUsername = username.toLowerCase().trim();
       const cleanEmail = email.toLowerCase().trim();
+      const cleanBranch = branch.trim();
 
       const existingUserByUsername = await User.findOne({ username: cleanUsername });
       if (existingUserByUsername) {
@@ -262,6 +275,7 @@ class AuthController {
         phone: phone ? phone.trim() : '',
         role: normalizedRole,
         department: department || 'Operations',
+        branch: cleanBranch,
         dateOfJoining: dateOfJoining || new Date(),
         otpHash: hashedOTP,
         lastSentAt: new Date()
@@ -319,6 +333,8 @@ class AuthController {
         });
       }
 
+      const assignedBranch = pending.branch || 'Pune Head Office';
+
       // If worker role registration, DO NOT create active user or issue JWT! Create PendingWorker request.
       if (pending.role && pending.role.toLowerCase() === 'worker') {
         await PendingWorker.deleteMany({ email: cleanEmail });
@@ -330,6 +346,7 @@ class AuthController {
           passwordHash: pending.password,
           mobile: pending.phone || '',
           department: pending.department || 'Operations',
+          branch: assignedBranch,
           joiningDate: pending.dateOfJoining || new Date(),
           status: 'Pending',
           emailVerified: true
@@ -343,12 +360,19 @@ class AuthController {
 
         try {
           const Notification = require('../models/Notification');
-          const supervisors = await User.find({ role: { $in: ['Supervisor', 'Owner', 'Manager', 'Admin'] } });
+          const supervisors = await User.find({
+            role: { $in: ['Supervisor', 'Owner', 'Manager', 'Admin'] },
+            $or: [
+              { branch: assignedBranch },
+              { unit: assignedBranch },
+              { role: { $in: ['Owner', 'Admin'] } }
+            ]
+          });
           const notifPromises = supervisors.map(sup =>
             Notification.create({
               user: sup._id,
               title: `✉️ New Worker Registration Request`,
-              message: `${pendingWorker.fullName} (@${pendingWorker.username}) from ${pendingWorker.department} has submitted a registration request.`,
+              message: `${pendingWorker.fullName} (@${pendingWorker.username}) from ${assignedBranch} has submitted a registration request.`,
               description: `Registration request awaiting supervisor review & salary assignment.`,
               type: 'approval',
               itemId: pendingWorker._id.toString()
@@ -371,12 +395,16 @@ class AuthController {
           phone: pending.phone || '',
           role: pending.role,
           department: pending.department || 'Operations',
+          branch: assignedBranch,
+          assignedSite: assignedBranch,
           salary: pending.role === 'Supervisor' ? 28000 : 18000,
           status: 'Active',
           dateOfJoining: pending.dateOfJoining || new Date()
         });
       } else {
         worker.email = pending.email;
+        worker.branch = assignedBranch;
+        worker.assignedSite = assignedBranch;
         if (pending.phone) worker.phone = pending.phone;
         await worker.save();
       }
@@ -387,6 +415,8 @@ class AuthController {
         password: pending.password,
         role: pending.role,
         department: pending.department || 'Operations',
+        branch: assignedBranch,
+        unit: assignedBranch,
         phone: pending.phone || '',
         status: 'Active',
         isEmailVerified: true,
@@ -398,7 +428,7 @@ class AuthController {
       await RegistrationOTP.deleteOne({ _id: pending._id });
 
       const token = jwt.sign(
-        { id: user._id, username: user.username, role: user.role, workerId: worker._id },
+        { id: user._id, username: user.username, role: user.role, branch: user.branch || user.unit || assignedBranch, workerId: worker._id },
         process.env.JWT_SECRET || 'fallback_secret',
         { expiresIn: '30d' }
       );
@@ -412,6 +442,7 @@ class AuthController {
           username: user.username,
           email: user.email,
           role: user.role,
+          branch: user.branch || user.unit || assignedBranch,
           status: user.status
         }
       });
@@ -531,7 +562,7 @@ class AuthController {
       }
 
       const token = jwt.sign(
-        { id: user._id, username: user.username, role: user.role, workerId: worker ? worker._id : null },
+        { id: user._id, username: user.username, role: user.role, branch: user.branch || user.unit || 'Pune Head Office', workerId: worker ? worker._id : null },
         process.env.JWT_SECRET || 'fallback_secret',
         { expiresIn: '30d' }
       );
@@ -547,6 +578,7 @@ class AuthController {
           username: user.username,
           email: user.email,
           role: user.role,
+          branch: user.branch || user.unit || 'Pune Head Office',
           status: user.status,
           isEmailVerified: user.isEmailVerified,
           worker: worker ? {
@@ -554,6 +586,7 @@ class AuthController {
             name: worker.name,
             phone: worker.phone,
             role: worker.role,
+            branch: worker.branch || worker.assignedSite || 'Pune Head Office',
             ...(isAuthorized ? { salary: worker.salary } : {}),
             status: worker.status
           } : null
@@ -712,13 +745,12 @@ class AuthController {
         success: true,
         data: {
           id: user._id,
-          name: profileName,
           username: user.username,
           email: user.email,
-          phone: profilePhone,
           role: user.role,
+          branch: user.branch || user.unit || 'Pune Head Office',
           department: profileDepartment,
-          unit: user.unit || 'Unit Pune-A12',
+          unit: user.branch || user.unit || 'Pune Head Office',
           address: user.address || 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057',
           dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().split('T')[0] : '1990-01-01',
           dateOfJoining: profileDateOfJoining ? new Date(profileDateOfJoining).toISOString().split('T')[0] : '2024-01-15',
@@ -730,6 +762,7 @@ class AuthController {
             name: user.worker.name,
             phone: user.worker.phone,
             role: user.worker.role,
+            branch: user.worker.branch || user.worker.assignedSite || 'Pune Head Office',
             ...(isAuthorized ? { salary: user.worker.salary } : {}),
             status: user.worker.status
           } : null

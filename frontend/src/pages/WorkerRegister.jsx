@@ -16,6 +16,7 @@ const WorkerRegister = ({ showToast }) => {
     address: '',
     joiningDate: new Date().toISOString().split('T')[0],
     department: 'Assembly',
+    branch: 'Pune Head Office',
     photo: ''
   });
 
@@ -52,8 +53,8 @@ const WorkerRegister = ({ showToast }) => {
   const handleSubmitForm = async (e) => {
     e.preventDefault();
 
-    if (!form.fullName.trim() || !form.username.trim() || !form.email.trim() || !form.password || !form.mobile.trim()) {
-      if (showToast) showToast('Please fill in all mandatory fields.', 'error');
+    if (!form.fullName.trim() || !form.username.trim() || !form.email.trim() || !form.password || !form.mobile.trim() || !form.branch.trim()) {
+      if (showToast) showToast('Please fill in all mandatory fields (including Branch / Office).', 'error');
       return;
     }
 
@@ -270,7 +271,23 @@ const WorkerRegister = ({ showToast }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Branch / Office *</label>
+                <select
+                  value={form.branch}
+                  onChange={(e) => setForm({ ...form, branch: e.target.value })}
+                  className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-bold text-on-surface outline-none focus:border-primary cursor-pointer"
+                  required
+                >
+                  <option value="Pune Head Office">Pune Head Office</option>
+                  <option value="Pune Unit A12">Pune Unit A12</option>
+                  <option value="Mumbai Branch">Mumbai Branch</option>
+                  <option value="Nashik Branch">Nashik Branch</option>
+                  <option value="Bangalore Office">Bangalore Office</option>
+                </select>
+              </div>
+
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Department *</label>
                 <select
@@ -285,7 +302,9 @@ const WorkerRegister = ({ showToast }) => {
                   <option value="Operations">Operations</option>
                 </select>
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Date of Birth</label>
                 <input

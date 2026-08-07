@@ -3,7 +3,7 @@ const workerService = require('../services/workerService');
 class WorkerController {
   async getAllWorkers(req, res, next) {
     try {
-      let workers = await workerService.getAllWorkers(req.query);
+      let workers = await workerService.getAllWorkers(req.query, req.user);
       const userRole = req.user ? req.user.role : '';
       const isAuthorized = userRole.toLowerCase() === 'owner' || userRole.toLowerCase() === 'supervisor';
       
@@ -49,7 +49,13 @@ class WorkerController {
         });
       }
 
-      let worker = await workerService.createWorker(req.body);
+      let workerData = { ...req.body };
+      if (req.user && (userRole.toLowerCase() === 'supervisor' || userRole.toLowerCase() === 'manager')) {
+        workerData.branch = workerData.branch || req.user.branch || req.user.unit || 'Pune Head Office';
+        workerData.assignedSite = workerData.branch;
+      }
+
+      let worker = await workerService.createWorker(workerData);
       
       if (!isAuthorized) {
         const obj = worker.toObject ? worker.toObject() : JSON.parse(JSON.stringify(worker));
@@ -119,7 +125,7 @@ class WorkerController {
   // Supervisor Pending Registration Methods
   async getPendingRegistrations(req, res, next) {
     try {
-      const pendingList = await workerService.getPendingRegistrations();
+      const pendingList = await workerService.getPendingRegistrations(req.user);
       res.status(200).json({ success: true, count: pendingList.length, data: pendingList });
     } catch (err) {
       next(err);
@@ -129,7 +135,7 @@ class WorkerController {
   async approveRegistration(req, res, next) {
     try {
       const { salary } = req.body;
-      const result = await workerService.approveRegistration(req.params.id, salary);
+      const result = await workerService.approveRegistration(req.params.id, salary, req.user);
       res.status(200).json({ success: true, message: result.message, data: result });
     } catch (err) {
       if (err.statusCode) {
@@ -142,7 +148,7 @@ class WorkerController {
   async rejectRegistration(req, res, next) {
     try {
       const { rejectionReason } = req.body;
-      const result = await workerService.rejectRegistration(req.params.id, rejectionReason);
+      const result = await workerService.rejectRegistration(req.params.id, rejectionReason, req.user);
       res.status(200).json({ success: true, message: result.message, data: result });
     } catch (err) {
       if (err.statusCode) {

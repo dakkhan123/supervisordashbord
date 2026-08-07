@@ -12,6 +12,7 @@ const Register = ({ showToast }) => {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('Supervisor');
+  const [branch, setBranch] = useState('Pune Head Office');
   const [dateOfJoining, setDateOfJoining] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
@@ -55,9 +56,9 @@ const Register = ({ showToast }) => {
     setSuccessMessage('');
 
     // 1. Mandatory Fields Validation
-    if (!name.trim() || !username.trim() || !email.trim() || !password.trim()) {
-      showToast('Please fill in all required fields (Full Name, Username, Email, Password).', 'error');
-      setErrorMessage('Full Name, Username, Email, and Password are mandatory.');
+    if (!name.trim() || !username.trim() || !email.trim() || !password.trim() || !branch.trim()) {
+      showToast('Please fill in all required fields (Full Name, Username, Email, Password, Branch / Office).', 'error');
+      setErrorMessage('Full Name, Username, Email, Password, and Branch / Office are mandatory.');
       return;
     }
 
@@ -85,6 +86,7 @@ const Register = ({ showToast }) => {
         password: password.trim(),
         phone: phone.trim(),
         role,
+        branch: branch.trim(),
         dateOfJoining
       });
 
@@ -331,6 +333,26 @@ const Register = ({ showToast }) => {
                     >
                       <option value="Supervisor">Supervisor (Full Console Rights)</option>
                       <option value="Worker">Worker (Limited Rights)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-outline uppercase tracking-widest">Branch / Office (Required)</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">domain</span>
+                    <select
+                      value={branch}
+                      onChange={(e) => setBranch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      disabled={loading}
+                      required
+                    >
+                      <option value="Pune Head Office">Pune Head Office</option>
+                      <option value="Pune Unit A12">Pune Unit A12</option>
+                      <option value="Mumbai Branch">Mumbai Branch</option>
+                      <option value="Nashik Branch">Nashik Branch</option>
+                      <option value="Bangalore Office">Bangalore Office</option>
                     </select>
                   </div>
                 </div>

@@ -8,6 +8,7 @@ const RegistrationOTPSchema = new mongoose.Schema({
   phone: { type: String, trim: true },
   role: { type: String, default: 'Supervisor' },
   department: { type: String, default: 'Operations' },
+  branch: { type: String, default: 'Pune Head Office', trim: true },
   dateOfJoining: { type: Date, default: Date.now },
   otpHash: { type: String, required: true },
   lastSentAt: { type: Date, default: Date.now },

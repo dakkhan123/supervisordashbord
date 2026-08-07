@@ -188,6 +188,10 @@ const WorkerRegistrationRequests = ({ showToast }) => {
                     <strong className="text-primary font-bold">{req.department}</strong>
                   </div>
                   <div className="flex justify-between">
+                    <span>Branch / Office:</span>
+                    <strong className="text-teal-400 font-bold bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">{req.branch || 'Pune Head Office'}</strong>
+                  </div>
+                  <div className="flex justify-between">
                     <span>Joining Date:</span>
                     <strong className="text-on-surface">{new Date(req.joiningDate).toLocaleDateString()}</strong>
                   </div>

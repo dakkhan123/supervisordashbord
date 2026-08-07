@@ -58,6 +58,11 @@ const WorkerSchema = new mongoose.Schema({
     type: String,
     default: 'Pune Head Office'
   },
+  branch: {
+    type: String,
+    default: 'Pune Head Office',
+    trim: true
+  },
   shiftTiming: {
     type: String,
     default: '9:00 AM - 6:00 PM'

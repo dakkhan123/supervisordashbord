@@ -4,10 +4,80 @@ const Worker = require('../models/Worker');
 const salaryService = require('./salaryService');
 
 class AttendanceService {
-  async getAllAttendance(queryParams) {
+  async getBranchForUser(requestingUser) {
+    if (!requestingUser) return 'Pune Head Office';
+    if (requestingUser.branch) return requestingUser.branch;
+    if (requestingUser.unit) return requestingUser.unit;
+    if (requestingUser.id || requestingUser._id) {
+      const User = require('../models/User');
+      const u = await User.findById(requestingUser.id || requestingUser._id);
+      if (u && (u.branch || u.unit)) return u.branch || u.unit;
+    }
+    return 'Pune Head Office';
+  }
+
+  async verifyAttendanceModificationAuth(targetWorkerId, requestingUser) {
+    if (!requestingUser) return;
+    const roleLower = (requestingUser.role || '').toLowerCase();
+    if (roleLower === 'supervisor' || roleLower === 'manager') {
+      if (!targetWorkerId) {
+        const error = new Error('Worker ID is required to modify attendance.');
+        error.statusCode = 400;
+        throw error;
+      }
+      const targetWorker = await Worker.findById(targetWorkerId).populate('user');
+      if (!targetWorker) {
+        const error = new Error('Target worker profile not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // 1. Check if target worker is a Supervisor, Admin, Owner, Manager, or the requesting user themselves
+      const targetWorkerRole = (targetWorker.role || (targetWorker.user ? targetWorker.user.role : '') || '').toLowerCase();
+      const targetUserId = targetWorker.user ? targetWorker.user._id.toString() : null;
+      const requestingUserId = requestingUser.id ? requestingUser.id.toString() : (requestingUser._id ? requestingUser._id.toString() : null);
+
+      if (['supervisor', 'admin', 'owner', 'manager'].includes(targetWorkerRole) || (targetUserId && targetUserId === requestingUserId)) {
+        const error = new Error('Access Denied: Supervisors cannot edit their own attendance or another supervisor\'s attendance.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // 2. Check Branch isolation
+      const userBranch = await this.getBranchForUser(requestingUser);
+      const targetBranch = targetWorker.branch || targetWorker.assignedSite || 'Pune Head Office';
+      if (userBranch !== targetBranch) {
+        const error = new Error('Access Denied: You can only manage attendance for workers in your assigned branch.');
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+  }
+
+  async getAllAttendance(queryParams, requestingUser) {
     const { worker, date, status } = queryParams || {};
     let query = {};
-    if (worker) query.worker = worker;
+
+    if (requestingUser) {
+      const roleLower = (requestingUser.role || '').toLowerCase();
+      if (roleLower === 'supervisor' || roleLower === 'manager') {
+        const userBranch = await this.getBranchForUser(requestingUser);
+        const branchWorkers = await Worker.find({
+          $or: [{ branch: userBranch }, { assignedSite: userBranch }]
+        }).select('_id');
+        const branchWorkerIds = branchWorkers.map(w => w._id);
+        if (worker) {
+          query.worker = worker;
+        } else {
+          query.worker = { $in: branchWorkerIds };
+        }
+      } else if (worker) {
+        query.worker = worker;
+      }
+    } else if (worker) {
+      query.worker = worker;
+    }
+
     if (status) query.status = status;
     if (date) {
       const start = new Date(date);
@@ -34,7 +104,9 @@ class AttendanceService {
     return record;
   }
 
-  async createAttendance(data) {
+  async createAttendance(data, requestingUser) {
+    await this.verifyAttendanceModificationAuth(data.worker, requestingUser);
+
     const record = await Attendance.create(data);
     const populated = await Attendance.findById(record._id).populate('worker');
 
@@ -56,17 +128,20 @@ class AttendanceService {
     return populated;
   }
 
-  async updateAttendance(id, data) {
-    const record = await Attendance.findByIdAndUpdate(id, data, {
-      new: true,
-      runValidators: true
-    }).populate('worker');
-
-    if (!record) {
+  async updateAttendance(id, data, requestingUser) {
+    const existing = await Attendance.findById(id);
+    if (!existing) {
       const error = new Error('Attendance record not found');
       error.statusCode = 404;
       throw error;
     }
+
+    await this.verifyAttendanceModificationAuth(existing.worker, requestingUser);
+
+    const record = await Attendance.findByIdAndUpdate(id, data, {
+      new: true,
+      runValidators: true
+    }).populate('worker');
 
     if (record.worker) {
       const workerObj = await Worker.findById(record.worker);
@@ -86,13 +161,17 @@ class AttendanceService {
     return record;
   }
 
-  async deleteAttendance(id) {
-    const record = await Attendance.findByIdAndDelete(id);
-    if (!record) {
+  async deleteAttendance(id, requestingUser) {
+    const existing = await Attendance.findById(id);
+    if (!existing) {
       const error = new Error('Attendance record not found');
       error.statusCode = 404;
       throw error;
     }
+
+    await this.verifyAttendanceModificationAuth(existing.worker, requestingUser);
+
+    const record = await Attendance.findByIdAndDelete(id);
 
     if (record.worker) {
       const targetMonth = `${new Date(record.date || Date.now()).toLocaleString('en-US', { month: 'long' })} ${new Date(record.date || Date.now()).getFullYear()}`;

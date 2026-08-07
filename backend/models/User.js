@@ -29,7 +29,12 @@ const UserSchema = new mongoose.Schema({
   },
   unit: {
     type: String,
-    default: 'Unit Pune-A12'
+    default: 'Pune Head Office'
+  },
+  branch: {
+    type: String,
+    default: 'Pune Head Office',
+    trim: true
   },
   address: {
     type: String,

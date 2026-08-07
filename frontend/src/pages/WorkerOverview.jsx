@@ -443,7 +443,7 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-[13px] text-on-surface truncate">{w.name}</p>
-                        <p className="text-[10px] text-outline mt-0.5 truncate">{w.role} · {w.status}</p>
+                        <p className="text-[10px] text-outline mt-0.5 truncate">{w.role} · <span className="text-teal-400 font-bold">{w.branch || w.assignedSite || 'Pune Head Office'}</span></p>
                       </div>
                     </div>
                     {w.status === 'Active' && perf && (
@@ -480,7 +480,7 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                           {selectedWorker.status}
                         </span>
                       </div>
-                      <p className="text-xs font-semibold text-outline mt-1">{selectedWorker.role} · Unit Pune-A12</p>
+                      <p className="text-xs font-semibold text-outline mt-1">{selectedWorker.role} · <strong className="text-teal-400 font-bold">{selectedWorker.branch || selectedWorker.assignedSite || 'Pune Head Office'}</strong></p>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-4 text-[12px] text-on-surface-variant font-medium">
                         <p className="flex items-center gap-1.5">
