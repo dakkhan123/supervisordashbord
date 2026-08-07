@@ -706,13 +706,13 @@ class AuthController {
   }
 
   // Legacy alias helpers
-  async forgotPassword(req, res, next) {
+  forgotPassword = (req, res, next) => {
     return this.forgotPasswordSendOTP(req, res, next);
-  }
+  };
 
-  async resetPassword(req, res, next) {
+  resetPassword = (req, res, next) => {
     return this.forgotPasswordReset(req, res, next);
-  }
+  };
 
   async getMe(req, res, next) {
     try {

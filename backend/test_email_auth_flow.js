@@ -41,6 +41,7 @@ async function testFlow() {
         password: 'Password123!',
         phone: '9876543210',
         role: 'Supervisor',
+        branch: 'Pune Head Office',
         dateOfJoining: '2026-08-04'
       }
     };
