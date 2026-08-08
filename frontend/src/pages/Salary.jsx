@@ -313,10 +313,9 @@ const Salary = ({ showToast }) => {
                 <span className="material-symbols-outlined text-[14px] text-primary">verified</span>
                 Calculation Rules Summary
               </span>
-              <p>• <strong>Per Day Salary:</strong> Monthly Salary ÷ Total Days in Month</p>
-              <p>• <strong>Leave Policy:</strong> First 3 leave days free (Exempted). Deduct 1 Per Day Salary per Leave from 4th Leave onward.</p>
+              <p>• <strong>Per Day Salary:</strong> Monthly Salary ÷ Days in Month</p>
+              <p>• <strong>Absent Policy:</strong> First 5 days excused (Paid). Deduct 1 Per Day Salary from 6th Absent onward.</p>
               <p>• <strong>Late Policy:</strong> First 3 excused. From 4th Late, each Late = Half Day deduction (0.5 × Per Day Salary).</p>
-              <p>• <strong>Half Days:</strong> Each Half Day = 0.5 × Per Day Salary.</p>
               <p>• <strong>Overtime:</strong> Earns 0.5 × Per Day Salary per Overtime Day.</p>
             </div>
           </div>
@@ -325,7 +324,7 @@ const Salary = ({ showToast }) => {
           <div className="lg:col-span-2">
             {!selectedWorkerId ? (
               <div className="bg-surface-lowest border border-outline-variant rounded-md p-12 text-center text-xs text-outline font-semibold">
-                Select a worker and month from the left panel to display automated calculation breakdown.
+                Select a worker and month from the left panel to display automated 14-field calculation matrix.
               </div>
             ) : calcLoading ? (
               <div className="bg-surface-lowest border border-outline-variant rounded-md p-12 text-center text-xs text-outline font-semibold flex flex-col items-center gap-2">
@@ -337,8 +336,8 @@ const Salary = ({ showToast }) => {
                 <div className="flex items-center justify-between border-b border-outline-variant/40 pb-4">
                   <div>
                     <span className="text-[10px] font-bold text-outline uppercase tracking-wider">AUTOMATED CALCULATION BREAKDOWN</span>
-                    <h3 className="text-xl font-black text-on-surface mt-0.5">{calcData.worker?.name || 'Worker'}</h3>
-                    <p className="text-xs text-outline font-medium">Role: {calcData.worker?.role || 'Worker'} · Month: {calcData.month}</p>
+                    <h3 className="text-xl font-black text-on-surface mt-0.5">{calcData.worker.name}</h3>
+                    <p className="text-xs text-outline font-medium">Role: {calcData.worker.role} · Month: {calcData.month}</p>
                   </div>
                   <button
                     onClick={() => {
@@ -350,119 +349,107 @@ const Salary = ({ showToast }) => {
                   </button>
                 </div>
 
-                {/* 1. Salary Parameters */}
-                <div>
-                  <h4 className="text-[11px] font-extrabold text-outline uppercase tracking-wider mb-2">Base Salary Parameters</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Monthly Salary</span>
-                      <span className="text-sm font-extrabold text-on-surface">{formatINR(calcData.monthlySalary)}</span>
+                {/* Attendance & Salary Metrics Matrix */}
+                <div className="flex flex-col gap-4">
+                  {/* Salary Parameters */}
+                  <div>
+                    <h3 className="text-[11px] font-black text-outline uppercase tracking-wider mb-2">1. Salary Parameters</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Monthly Salary</span>
+                        <span className="text-sm font-extrabold text-on-surface">{formatINR(calcData.monthlySalary ?? 0)}</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Total Days in Month</span>
+                        <span className="text-sm font-extrabold text-on-surface">{calcData.totalDays ?? 0} Days</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Per Day Salary</span>
+                        <span className="text-sm font-extrabold text-on-surface">{formatINR(calcData.perDaySalary ?? 0)}</span>
+                      </div>
                     </div>
+                  </div>
 
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Total Days</span>
-                      <span className="text-sm font-extrabold text-on-surface">{calcData.totalDays || calcData.totalDaysInMonth || 0} Days</span>
+                  {/* Attendance Summary */}
+                  <div>
+                    <h3 className="text-[11px] font-black text-outline uppercase tracking-wider mb-2">2. Attendance Summary</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-xs">
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Present Days</span>
+                        <span className="text-sm font-extrabold text-primary">{calcData.presentDays ?? 0} Days</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Absent Days</span>
+                        <span className="text-sm font-extrabold text-error">{calcData.absentDays ?? 0} Days</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Leave Days</span>
+                        <span className="text-sm font-extrabold font-mono text-on-surface">{calcData.leaveDays ?? 0} Days</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Exempted Leave</span>
+                        <span className="text-sm font-extrabold text-primary">{calcData.exemptedLeaveDays ?? 0} Days</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Chargeable Leave</span>
+                        <span className="text-sm font-extrabold text-error">{calcData.chargeableLeaveDays ?? 0} Days</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Half Days</span>
+                        <span className="text-sm font-extrabold text-amber-700">{calcData.halfDays ?? 0} Days</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Late Count</span>
+                        <span className="text-sm font-extrabold text-amber-700">{calcData.lateCount ?? 0} Times</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Excused Late</span>
+                        <span className="text-sm font-extrabold text-primary">{calcData.excusedLateCount ?? 0} Times</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Chargeable Late</span>
+                        <span className="text-sm font-extrabold text-amber-700">{calcData.chargeableLateCount ?? 0} Times</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Overtime Days</span>
+                        <span className="text-sm font-extrabold text-primary">{calcData.overtimeDays ?? 0} Days</span>
+                      </div>
                     </div>
+                  </div>
 
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Per Day Salary</span>
-                      <span className="text-sm font-extrabold text-on-surface">{formatINR(calcData.perDaySalary)}</span>
+                  {/* Deductions & Overtime Pay */}
+                  <div>
+                    <h3 className="text-[11px] font-black text-outline uppercase tracking-wider mb-2">3. Deductions & Overtime</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-xs">
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Leave Deduction</span>
+                        <span className="text-sm font-extrabold text-error">-{formatINR(calcData.leaveDeduction ?? 0)}</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Half Day Deduction</span>
+                        <span className="text-sm font-extrabold text-error">-{formatINR(calcData.halfDayDeduction ?? 0)}</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Late Deduction</span>
+                        <span className="text-sm font-extrabold text-error">-{formatINR(calcData.lateDeduction ?? 0)}</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Other Deduction</span>
+                        <span className="text-sm font-extrabold text-error">-{formatINR(calcData.otherDeduction ?? 0)}</span>
+                      </div>
+                      <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                        <span className="text-[10px] font-bold text-outline uppercase block">Overtime Pay</span>
+                        <span className="text-sm font-extrabold text-primary">+{formatINR(calcData.overtimePay ?? 0)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Attendance Summary */}
-                <div>
-                  <h4 className="text-[11px] font-extrabold text-outline uppercase tracking-wider mb-2">Attendance Summary</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Present Days</span>
-                      <span className="text-sm font-extrabold text-primary">{calcData.presentDays || 0} Days</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Absent Days</span>
-                      <span className="text-sm font-extrabold text-error">{calcData.absentDays || 0} Days</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Leave Days</span>
-                      <span className="text-sm font-extrabold text-on-surface">{calcData.leaveDays || 0} Days</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Exempted Leave</span>
-                      <span className="text-sm font-extrabold text-primary">{calcData.exemptedLeaveDays || 0} Days</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Chargeable Leave</span>
-                      <span className="text-sm font-extrabold text-error">{calcData.chargeableLeaveDays || 0} Days</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Half Days</span>
-                      <span className="text-sm font-extrabold text-amber-700">{calcData.halfDays || 0} Days</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Late Count</span>
-                      <span className="text-sm font-extrabold text-amber-700">{calcData.lateCount || 0} Times</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Excused Late</span>
-                      <span className="text-sm font-extrabold text-primary">{calcData.excusedLateCount || 0} Times</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Chargeable Late</span>
-                      <span className="text-sm font-extrabold text-amber-700">{calcData.chargeableLateCount || 0} Times</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Overtime Days</span>
-                      <span className="text-sm font-extrabold text-primary">{calcData.overtimeDays || 0} Days</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Deductions & Overtime Breakdown */}
-                <div>
-                  <h4 className="text-[11px] font-extrabold text-outline uppercase tracking-wider mb-2">Deductions & Earnings</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Leave Deduction</span>
-                      <span className="text-sm font-extrabold text-error">-{formatINR(calcData.leaveDeduction || 0)}</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Half Day Deduction</span>
-                      <span className="text-sm font-extrabold text-error">-{formatINR(calcData.halfDayDeduction || 0)}</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Late Deduction</span>
-                      <span className="text-sm font-extrabold text-error">-{formatINR(calcData.lateDeduction || 0)}</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Other Deduction</span>
-                      <span className="text-sm font-extrabold text-on-surface">{formatINR(calcData.otherDeduction || 0)}</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Overtime Pay</span>
-                      <span className="text-sm font-extrabold text-primary">+{formatINR(calcData.overtimePay || 0)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Final Net Calculation Box */}
-                <div className="p-4 bg-surface-low border border-outline-variant rounded-sm flex items-center justify-between">
+                {/* Final Net Calculation Box */}
+                <div className="p-4 bg-surface-low border border-outline-variant rounded-sm flex items-center justify-between mt-2">
                   <div>
                     <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Final Net Salary</p>
-                    <p className="text-2xl font-black text-on-surface mt-0.5">{formatINR(calcData.finalSalary)}</p>
+                    <p className="text-2xl font-black text-on-surface mt-0.5">{formatINR(calcData.finalSalary ?? 0)}</p>
                   </div>
                   <span className="material-symbols-outlined text-[36px] text-primary">check_circle</span>
                 </div>
@@ -645,77 +632,81 @@ const Salary = ({ showToast }) => {
                 </div>
               </div>
 
-              {/* Calculation Metrics Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+              {/* Attendance & Salary Metrics Matrix */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Monthly Salary</span>
-                  <span className="font-extrabold text-on-surface">{formatINR(selectedPayslip.monthlySalary || selectedPayslip.baseSalary)}</span>
+                  <span className="font-extrabold text-on-surface">{formatINR(selectedPayslip.monthlySalary ?? selectedPayslip.baseSalary ?? 0)}</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Total Days</span>
-                  <span className="font-extrabold text-on-surface">{selectedPayslip.totalDays || selectedPayslip.totalDaysInMonth || 30} Days</span>
+                  <span className="font-extrabold text-on-surface">{selectedPayslip.totalDays ?? 30} Days</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Per Day Salary</span>
-                  <span className="font-extrabold text-on-surface">{formatINR(selectedPayslip.perDaySalary)}</span>
+                  <span className="font-extrabold text-on-surface">{formatINR(selectedPayslip.perDaySalary ?? 0)}</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Present Days</span>
-                  <span className="font-extrabold text-primary">{selectedPayslip.presentDays || 0} Days</span>
+                  <span className="font-extrabold text-primary">{selectedPayslip.presentDays ?? 0} Days</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Absent Days</span>
-                  <span className="font-extrabold text-error">{selectedPayslip.absentDays || 0} Days</span>
+                  <span className="font-extrabold text-error">{selectedPayslip.absentDays ?? 0} Days</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Leave Days</span>
-                  <span className="font-extrabold text-on-surface">{selectedPayslip.leaveDays || 0} Days</span>
+                  <span className="font-extrabold text-on-surface">{selectedPayslip.leaveDays ?? 0} Days</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Exempted Leave</span>
-                  <span className="font-extrabold text-primary">{selectedPayslip.exemptedLeaveDays || 0} Days</span>
+                  <span className="font-extrabold text-primary">{selectedPayslip.exemptedLeaveDays ?? 0} Days</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Chargeable Leave</span>
-                  <span className="font-extrabold text-error">{selectedPayslip.chargeableLeaveDays || 0} Days</span>
+                  <span className="font-extrabold text-error">{selectedPayslip.chargeableLeaveDays ?? 0} Days</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Half Days</span>
-                  <span className="font-extrabold text-amber-700">{selectedPayslip.halfDays || 0} Days</span>
+                  <span className="font-extrabold text-amber-700">{selectedPayslip.halfDays ?? 0} Days</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Late Count</span>
-                  <span className="font-extrabold text-amber-700">{selectedPayslip.lateCount || 0} Times</span>
+                  <span className="font-extrabold text-amber-700">{selectedPayslip.lateCount ?? 0} Times</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Excused Late</span>
-                  <span className="font-extrabold text-primary">{selectedPayslip.excusedLateCount || 0} Times</span>
+                  <span className="font-extrabold text-primary">{selectedPayslip.excusedLateCount ?? 0} Times</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Chargeable Late</span>
-                  <span className="text-sm font-extrabold text-amber-700">{selectedPayslip.chargeableLateCount || 0} Times</span>
+                  <span className="font-extrabold text-amber-700">{selectedPayslip.chargeableLateCount ?? 0} Times</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Leave Deduction</span>
-                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.leaveDeduction || 0)}</span>
+                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.leaveDeduction ?? 0)}</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Half Day Deduction</span>
-                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.halfDayDeduction || 0)}</span>
+                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.halfDayDeduction ?? 0)}</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Late Deduction</span>
-                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.lateDeduction || 0)}</span>
+                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.lateDeduction ?? 0)}</span>
                 </div>
-                <div className="p-2 bg-surface-low border border-outline-variant rounded-sm">
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
+                  <span className="text-[9px] font-bold text-outline uppercase block">Overtime Days</span>
+                  <span className="font-extrabold text-primary">{selectedPayslip.overtimeDays ?? 0} Days</span>
+                </div>
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Overtime Pay</span>
-                  <span className="font-extrabold text-primary">+{formatINR(selectedPayslip.overtimePay || 0)}</span>
+                  <span className="font-extrabold text-primary">+{formatINR(selectedPayslip.overtimePay ?? 0)}</span>
                 </div>
               </div>
 
               <div className="p-3 bg-surface-low border border-outline-variant rounded-sm flex items-center justify-between">
                 <span className="text-xs font-bold text-outline uppercase">Final Net Salary</span>
-                <span className="text-xl font-black text-on-surface">{formatINR(selectedPayslip.finalSalary || selectedPayslip.amount)}</span>
+                <span className="text-xl font-black text-on-surface">{formatINR(selectedPayslip.finalSalary ?? selectedPayslip.amount ?? 0)}</span>
               </div>
             </div>
           </div>

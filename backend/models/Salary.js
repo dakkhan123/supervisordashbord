@@ -46,6 +46,18 @@ const SalarySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  excusedAbsentDays: {
+    type: Number,
+    default: 0
+  },
+  chargeableAbsentDays: {
+    type: Number,
+    default: 0
+  },
+  absentDeduction: {
+    type: Number,
+    default: 0
+  },
   leaveDays: {
     type: Number,
     default: 0
@@ -70,19 +82,15 @@ const SalarySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  excusedAbsentDays: {
-    type: Number,
-    default: 0
-  },
-  chargeableAbsentDays: {
-    type: Number,
-    default: 0
-  },
-  absentDeduction: {
-    type: Number,
-    default: 0
-  },
   otherDeduction: {
+    type: Number,
+    default: 0
+  },
+  payableDays: {
+    type: Number,
+    default: 0
+  },
+  baseEarnedSalary: {
     type: Number,
     default: 0
   },

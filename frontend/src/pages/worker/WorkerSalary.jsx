@@ -160,8 +160,8 @@ const WorkerSalary = ({ showToast }) => {
                     </div>
                   </div>
 
-                  {/* Calculation Metrics Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                  {/* Complete 14-Field Calculation Metrics Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                     <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
                       <span className="text-[10px] font-bold text-outline uppercase block">Monthly Salary</span>
                       <span className="text-sm font-extrabold text-on-surface">{formatINR(selectedSalary.monthlySalary || selectedSalary.baseSalary)}</span>
@@ -188,23 +188,13 @@ const WorkerSalary = ({ showToast }) => {
                     </div>
 
                     <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Leave Days</span>
-                      <span className="text-sm font-extrabold text-on-surface">{selectedSalary.leaveDays || 0} Days</span>
+                      <span className="text-[10px] font-bold text-outline uppercase block">Excused Absents</span>
+                      <span className="text-sm font-extrabold text-primary">{selectedSalary.excusedAbsentDays || 0} Paid</span>
                     </div>
 
                     <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Exempted Leave</span>
-                      <span className="text-sm font-extrabold text-primary">{selectedSalary.exemptedLeaveDays || 0} Days</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Chargeable Leave</span>
-                      <span className="text-sm font-extrabold text-error">{selectedSalary.chargeableLeaveDays || 0} Days</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Half Days</span>
-                      <span className="text-sm font-extrabold text-amber-700">{selectedSalary.halfDays || 0} Days</span>
+                      <span className="text-[10px] font-bold text-outline uppercase block">Chargeable Absents</span>
+                      <span className="text-sm font-extrabold text-error">{selectedSalary.chargeableAbsentDays || 0} Days</span>
                     </div>
 
                     <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
@@ -214,7 +204,7 @@ const WorkerSalary = ({ showToast }) => {
 
                     <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
                       <span className="text-[10px] font-bold text-outline uppercase block">Excused Late Count</span>
-                      <span className="text-sm font-extrabold text-primary">{selectedSalary.excusedLateCount || 0} Times</span>
+                      <span className="text-sm font-extrabold text-primary">{selectedSalary.excusedLateCount || 0} Excused</span>
                     </div>
 
                     <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
@@ -223,23 +213,18 @@ const WorkerSalary = ({ showToast }) => {
                     </div>
 
                     <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Leave Deduction</span>
-                      <span className="text-sm font-extrabold text-error">-{formatINR(selectedSalary.leaveDeduction || 0)}</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                      <span className="text-[10px] font-bold text-outline uppercase block">Half Day Deduction</span>
-                      <span className="text-sm font-extrabold text-error">-{formatINR(selectedSalary.halfDayDeduction || 0)}</span>
-                    </div>
-
-                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
                       <span className="text-[10px] font-bold text-outline uppercase block">Late Deduction</span>
-                      <span className="text-sm font-extrabold text-error">-{formatINR(selectedSalary.lateDeduction || 0)}</span>
+                      <span className="text-sm font-extrabold text-error">-{formatINR(selectedSalary.lateDeduction)}</span>
+                    </div>
+
+                    <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                      <span className="text-[10px] font-bold text-outline uppercase block">Overtime Days</span>
+                      <span className="text-sm font-extrabold text-primary">{selectedSalary.overtimeDays || 0} Days</span>
                     </div>
 
                     <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
                       <span className="text-[10px] font-bold text-outline uppercase block">Overtime Pay</span>
-                      <span className="text-sm font-extrabold text-primary">+{formatINR(selectedSalary.overtimePay || 0)}</span>
+                      <span className="text-sm font-extrabold text-primary">+{formatINR(selectedSalary.overtimePay)}</span>
                     </div>
                   </div>
 
