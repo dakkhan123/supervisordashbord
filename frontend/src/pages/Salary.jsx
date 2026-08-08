@@ -345,16 +345,17 @@ const Salary = ({ showToast }) => {
               </div>
             </div>
 
-            {/* Attendance & Late Rules Infobox */}
+            {/* Attendance & Leave Policy Infobox */}
             <div className="p-4 bg-surface-low border border-outline-variant rounded-sm text-[11px] text-outline flex flex-col gap-2 leading-relaxed">
               <span className="font-bold text-on-surface flex items-center gap-1">
                 <span className="material-symbols-outlined text-[14px] text-primary">verified</span>
                 Calculation Rules Summary
               </span>
-              <p>• <strong>Per Day Salary:</strong> Monthly Salary ÷ Days in Month</p>
-              <p>• <strong>Absent Policy:</strong> First 5 days excused (Paid). Deduct 1 Per Day Salary from 6th Absent onward.</p>
-              <p>• <strong>Late Policy:</strong> First 3 excused. From 4th Late, each Late = Half Day deduction (0.5 × Per Day Salary).</p>
-              <p>• <strong>Overtime:</strong> Earns 0.5 × Per Day Salary per Overtime Day.</p>
+              <p>• <strong>Per Day Salary:</strong> Monthly Base Salary ÷ Total Days in Month</p>
+              <p>• <strong>3-Leave Exemption Policy:</strong> First 3 leave days in a month are <strong>FREE / EXEMPTED (₹0 deduction)</strong>. Salary is deducted ONLY for leave days beyond 3 (<code>Deductible Leaves × Per Day Salary</code>).</p>
+              <p>• <strong>Half Day Policy:</strong> Half Day Deduction = Total Half Days × (0.5 × Per Day Salary).</p>
+              <p>• <strong>Late Policy:</strong> First 3 late entries excused. From 4th late, each late = 0.5 × Per Day Salary deduction.</p>
+              <p>• <strong>Overtime Pay:</strong> Earns 0.5 × Per Day Salary per Overtime Day.</p>
             </div>
           </div>
 
@@ -390,12 +391,12 @@ const Salary = ({ showToast }) => {
                 {/* 14 Required Fields Matrix */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                   <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Monthly Salary</span>
+                    <span className="text-[10px] font-bold text-outline uppercase block">Monthly Base Salary</span>
                     <span className="text-sm font-extrabold text-on-surface">{formatINR(calcData.monthlySalary)}</span>
                   </div>
 
                   <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Total Days</span>
+                    <span className="text-[10px] font-bold text-outline uppercase block">Total Days in Month</span>
                     <span className="text-sm font-extrabold text-on-surface">{calcData.totalDays} Days</span>
                   </div>
 
@@ -410,48 +411,43 @@ const Salary = ({ showToast }) => {
                   </div>
 
                   <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Absent Days</span>
-                    <span className="text-sm font-extrabold text-error">{calcData.absentDays} Days</span>
+                    <span className="text-[10px] font-bold text-outline uppercase block">Total Leave Days</span>
+                    <span className="text-sm font-extrabold text-amber-700">{calcData.totalLeaveDays || (calcData.absentDays + (calcData.leaveDays || 0))} Days</span>
+                  </div>
+
+                  <div className="p-3 bg-surface-low border border-outline-variant rounded-sm bg-teal-500/10 border-teal-500/20">
+                    <span className="text-[10px] font-bold text-teal-400 uppercase block">Free / Exempted Leaves</span>
+                    <span className="text-sm font-extrabold text-teal-300">{calcData.exemptedLeaveDays !== undefined ? calcData.exemptedLeaveDays : Math.min(3, (calcData.totalLeaveDays || calcData.absentDays || 0))} Days (Max 3 Free)</span>
                   </div>
 
                   <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Excused Absents</span>
-                    <span className="text-sm font-extrabold text-primary">{calcData.excusedAbsentDays} (Max 5 Paid)</span>
+                    <span className="text-[10px] font-bold text-outline uppercase block">Deductible Leave Days</span>
+                    <span className="text-sm font-extrabold text-error">{calcData.deductibleLeaveDays !== undefined ? calcData.deductibleLeaveDays : Math.max(0, (calcData.totalLeaveDays || calcData.absentDays || 0) - 3)} Days</span>
                   </div>
 
                   <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Chargeable Absents</span>
-                    <span className="text-sm font-extrabold text-error">{calcData.chargeableAbsentDays} Days</span>
+                    <span className="text-[10px] font-bold text-outline uppercase block">Leave Deduction</span>
+                    <span className="text-sm font-extrabold text-error">-{formatINR(calcData.leaveDeduction !== undefined ? calcData.leaveDeduction : calcData.absentDeduction)}</span>
                   </div>
 
                   <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Late Count</span>
-                    <span className="text-sm font-extrabold text-amber-700">{calcData.lateCount} Times</span>
+                    <span className="text-[10px] font-bold text-outline uppercase block">Half Days & Deduction</span>
+                    <span className="text-sm font-extrabold text-error">{calcData.halfDays || 0} Half (-{formatINR(calcData.halfDayDeduction || 0)})</span>
                   </div>
 
                   <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Excused Late Count</span>
-                    <span className="text-sm font-extrabold text-primary">{calcData.excusedLateCount} (Max 3 Excused)</span>
-                  </div>
-
-                  <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Chargeable Late</span>
-                    <span className="text-sm font-extrabold text-amber-700">{calcData.chargeableLateCount} Times</span>
-                  </div>
-
-                  <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Late Deduction</span>
-                    <span className="text-sm font-extrabold text-error">-{formatINR(calcData.lateDeduction)}</span>
-                  </div>
-
-                  <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
-                    <span className="text-[10px] font-bold text-outline uppercase block">Overtime Days</span>
-                    <span className="text-sm font-extrabold text-primary">{calcData.overtimeDays} Days</span>
+                    <span className="text-[10px] font-bold text-outline uppercase block">Late Count & Deduction</span>
+                    <span className="text-sm font-extrabold text-amber-700">{calcData.lateCount || 0} Late (-{formatINR(calcData.lateDeduction || 0)})</span>
                   </div>
 
                   <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
                     <span className="text-[10px] font-bold text-outline uppercase block">Overtime Pay</span>
-                    <span className="text-sm font-extrabold text-primary">+{formatINR(calcData.overtimePay)}</span>
+                    <span className="text-sm font-extrabold text-primary">+{formatINR(calcData.overtimePay)} ({calcData.overtimeDays || 0} Days)</span>
+                  </div>
+
+                  <div className="p-3 bg-surface-low border border-outline-variant rounded-sm">
+                    <span className="text-[10px] font-bold text-outline uppercase block">Total Deductions</span>
+                    <span className="text-sm font-extrabold text-error">-{formatINR(calcData.deductions)}</span>
                   </div>
                 </div>
 
@@ -459,7 +455,7 @@ const Salary = ({ showToast }) => {
                 <div className="p-4 bg-surface-low border border-outline-variant rounded-sm flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Final Net Salary</p>
-                    <p className="text-2xl font-black text-on-surface mt-0.5">{formatINR(calcData.finalSalary)}</p>
+                    <p className="text-2xl font-black text-on-surface mt-0.5">{formatINR(calcData.finalSalary || calcData.netSalary)}</p>
                   </div>
                   <span className="material-symbols-outlined text-[36px] text-primary">check_circle</span>
                 </div>
@@ -531,10 +527,11 @@ const Salary = ({ showToast }) => {
                   <th className="p-3.5">Worker Name</th>
                   <th className="p-3.5">Month</th>
                   <th className="p-3.5">Monthly Salary</th>
-                  <th className="p-3.5">Absent Deductions</th>
-                  <th className="p-3.5">Late Deductions</th>
+                  <th className="p-3.5">Total / Free Leaves</th>
+                  <th className="p-3.5">Leave Deduction</th>
+                  <th className="p-3.5">Half Day & Late</th>
                   <th className="p-3.5">Overtime Pay</th>
-                  <th className="p-3.5">Final Salary</th>
+                  <th className="p-3.5">Net Salary</th>
                   <th className="p-3.5">Status</th>
                   <th className="p-3.5 text-right">Actions</th>
                 </tr>
@@ -542,48 +539,59 @@ const Salary = ({ showToast }) => {
               <tbody className="divide-y divide-outline-variant/30 text-on-surface font-semibold">
                 {filteredSalaries.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="p-8 text-center text-outline">No salary records found.</td>
+                    <td colSpan="10" className="p-8 text-center text-outline">No salary records found.</td>
                   </tr>
                 ) : (
-                  filteredSalaries.map(sal => (
-                    <tr key={sal._id} className="hover:bg-surface-low transition-colors duration-150">
-                      <td className="p-3.5 font-bold text-on-surface">{sal.worker?.name || 'Worker'}</td>
-                      <td className="p-3.5 font-mono">{sal.month}</td>
-                      <td className="p-3.5 font-mono">{formatINR(sal.monthlySalary || sal.baseSalary)}</td>
-                      <td className="p-3.5 font-mono text-error">-{formatINR(sal.absentDeduction)}</td>
-                      <td className="p-3.5 font-mono text-error">-{formatINR(sal.lateDeduction)}</td>
-                      <td className="p-3.5 font-mono text-primary">+{formatINR(sal.overtimePay)}</td>
-                      <td className="p-3.5 font-mono font-black text-on-surface">{formatINR(sal.finalSalary || sal.amount)}</td>
-                      <td className="p-3.5">
-                        <button
-                          onClick={() => handleTogglePaymentStatus(sal._id, sal.status)}
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border cursor-pointer ${
-                            sal.status === 'Paid'
-                              ? 'bg-primary/10 text-primary border-primary/20'
-                              : 'bg-amber-500/10 text-amber-700 border-amber-500/20'
-                          }`}
-                        >
-                          {sal.status || 'Pending'}
-                        </button>
-                      </td>
-                      <td className="p-3.5 text-right flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setSelectedPayslip(sal)}
-                          className="p-1 rounded hover:bg-surface-low text-primary cursor-pointer"
-                          title="View Salary Slip"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSalary(sal._id)}
-                          className="p-1 rounded hover:bg-surface-low text-error cursor-pointer"
-                          title="Delete Record"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredSalaries.map(sal => {
+                    const leaves = sal.totalLeaveDays !== undefined ? sal.totalLeaveDays : (sal.absentDays + (sal.leaveDays || 0));
+                    const free = sal.exemptedLeaveDays !== undefined ? sal.exemptedLeaveDays : Math.min(3, leaves);
+                    const ded = sal.deductibleLeaveDays !== undefined ? sal.deductibleLeaveDays : Math.max(0, leaves - 3);
+                    const leaveDed = sal.leaveDeduction !== undefined ? sal.leaveDeduction : (sal.absentDeduction || 0);
+
+                    return (
+                      <tr key={sal._id} className="hover:bg-surface-low transition-colors duration-150">
+                        <td className="p-3.5 font-bold text-on-surface">{sal.worker?.name || 'Worker'}</td>
+                        <td className="p-3.5 font-mono">{sal.month}</td>
+                        <td className="p-3.5 font-mono">{formatINR(sal.monthlySalary || sal.baseSalary)}</td>
+                        <td className="p-3.5 font-mono">
+                          <span className="text-on-surface font-bold">{leaves} Days</span>{' '}
+                          <span className="text-teal-400 font-bold bg-teal-500/10 px-1 py-0.5 rounded text-[10px]">({free} Free / {ded} Ded)</span>
+                        </td>
+                        <td className="p-3.5 font-mono text-error">-{formatINR(leaveDed)}</td>
+                        <td className="p-3.5 font-mono text-error">-{formatINR((sal.halfDayDeduction || 0) + (sal.lateDeduction || 0))}</td>
+                        <td className="p-3.5 font-mono text-primary">+{formatINR(sal.overtimePay)}</td>
+                        <td className="p-3.5 font-mono font-black text-on-surface">{formatINR(sal.finalSalary || sal.amount || sal.netSalary)}</td>
+                        <td className="p-3.5">
+                          <button
+                            onClick={() => handleTogglePaymentStatus(sal._id, sal.status)}
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border cursor-pointer ${
+                              sal.status === 'Paid'
+                                ? 'bg-primary/10 text-primary border-primary/20'
+                                : 'bg-amber-500/10 text-amber-700 border-amber-500/20'
+                            }`}
+                          >
+                            {sal.status || 'Pending'}
+                          </button>
+                        </td>
+                        <td className="p-3.5 text-right flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setSelectedPayslip(sal)}
+                            className="p-1 rounded hover:bg-surface-low text-primary cursor-pointer"
+                            title="View Salary Slip"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSalary(sal._id)}
+                            className="p-1 rounded hover:bg-surface-low text-error cursor-pointer"
+                            title="Delete Record"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -697,11 +705,11 @@ const Salary = ({ showToast }) => {
               {/* 14 Calculation Fields Matrix */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
-                  <span className="text-[9px] font-bold text-outline uppercase block">Monthly Salary</span>
+                  <span className="text-[9px] font-bold text-outline uppercase block">Monthly Base Salary</span>
                   <span className="font-extrabold text-on-surface">{formatINR(selectedPayslip.monthlySalary || selectedPayslip.baseSalary)}</span>
                 </div>
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
-                  <span className="text-[9px] font-bold text-outline uppercase block">Total Days</span>
+                  <span className="text-[9px] font-bold text-outline uppercase block">Total Days in Month</span>
                   <span className="font-extrabold text-on-surface">{selectedPayslip.totalDays || 30} Days</span>
                 </div>
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
@@ -710,33 +718,45 @@ const Salary = ({ showToast }) => {
                 </div>
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Present Days</span>
-                  <span className="font-extrabold text-primary">{selectedPayslip.presentDays || 0}</span>
+                  <span className="font-extrabold text-primary">{selectedPayslip.presentDays || 0} Days</span>
                 </div>
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
-                  <span className="text-[9px] font-bold text-outline uppercase block">Absent Days</span>
-                  <span className="font-extrabold text-error">{selectedPayslip.absentDays || 0}</span>
+                  <span className="text-[9px] font-bold text-outline uppercase block">Total Leave Days</span>
+                  <span className="font-extrabold text-amber-700">{selectedPayslip.totalLeaveDays !== undefined ? selectedPayslip.totalLeaveDays : (selectedPayslip.absentDays || 0)} Days</span>
+                </div>
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm bg-teal-500/10 border-teal-500/20">
+                  <span className="text-[9px] font-bold text-teal-400 uppercase block">Free / Exempted Leaves</span>
+                  <span className="font-extrabold text-teal-300">{selectedPayslip.exemptedLeaveDays !== undefined ? selectedPayslip.exemptedLeaveDays : Math.min(3, (selectedPayslip.totalLeaveDays || selectedPayslip.absentDays || 0))} Days (Max 3 Free)</span>
                 </div>
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
-                  <span className="text-[9px] font-bold text-outline uppercase block">Chargeable Absents</span>
-                  <span className="font-extrabold text-error">{selectedPayslip.chargeableAbsentDays || 0}</span>
+                  <span className="text-[9px] font-bold text-outline uppercase block">Deductible Leave Days</span>
+                  <span className="font-extrabold text-error">{selectedPayslip.deductibleLeaveDays !== undefined ? selectedPayslip.deductibleLeaveDays : Math.max(0, (selectedPayslip.totalLeaveDays || selectedPayslip.absentDays || 0) - 3)} Days</span>
                 </div>
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
-                  <span className="text-[9px] font-bold text-outline uppercase block">Late Count</span>
-                  <span className="font-extrabold text-amber-700">{selectedPayslip.lateCount || 0}</span>
+                  <span className="text-[9px] font-bold text-outline uppercase block">Leave Deduction</span>
+                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.leaveDeduction !== undefined ? selectedPayslip.leaveDeduction : selectedPayslip.absentDeduction)}</span>
                 </div>
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
-                  <span className="text-[9px] font-bold text-outline uppercase block">Late Deduction</span>
-                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.lateDeduction)}</span>
+                  <span className="text-[9px] font-bold text-outline uppercase block">Half Days & Deduction</span>
+                  <span className="font-extrabold text-error">{selectedPayslip.halfDays || 0} Half (-{formatINR(selectedPayslip.halfDayDeduction || 0)})</span>
+                </div>
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
+                  <span className="text-[9px] font-bold text-outline uppercase block">Late Count & Deduction</span>
+                  <span className="font-extrabold text-amber-700">{selectedPayslip.lateCount || 0} Late (-{formatINR(selectedPayslip.lateDeduction || 0)})</span>
                 </div>
                 <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
                   <span className="text-[9px] font-bold text-outline uppercase block">Overtime Pay</span>
-                  <span className="font-extrabold text-primary">+{formatINR(selectedPayslip.overtimePay)}</span>
+                  <span className="font-extrabold text-primary">+{formatINR(selectedPayslip.overtimePay)} ({selectedPayslip.overtimeDays || 0} Days)</span>
+                </div>
+                <div className="p-2.5 bg-surface-low border border-outline-variant rounded-sm">
+                  <span className="text-[9px] font-bold text-outline uppercase block">Total Deductions</span>
+                  <span className="font-extrabold text-error">-{formatINR(selectedPayslip.deductions)}</span>
                 </div>
               </div>
 
               <div className="p-3 bg-surface-low border border-outline-variant rounded-sm flex items-center justify-between">
                 <span className="text-xs font-bold text-outline uppercase">Final Net Salary</span>
-                <span className="text-xl font-black text-on-surface">{formatINR(selectedPayslip.finalSalary || selectedPayslip.amount)}</span>
+                <span className="text-xl font-black text-on-surface">{formatINR(selectedPayslip.finalSalary || selectedPayslip.amount || selectedPayslip.netSalary)}</span>
               </div>
             </div>
           </div>

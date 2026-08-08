@@ -111,6 +111,7 @@ class SalaryService {
 
     let presentDays = 0;
     let absentDays = 0;
+    let leaveDays = 0;
     let lateCount = 0;
     let halfDays = 0;
     let overtimeAttendanceCount = 0;
@@ -118,6 +119,7 @@ class SalaryService {
     attendanceRecords.forEach(rec => {
       if (rec.status === 'Present') presentDays++;
       else if (rec.status === 'Absent') absentDays++;
+      else if (rec.status === 'Leave') leaveDays++;
       else if (rec.status === 'Late') lateCount++;
       else if (rec.status === 'Half Day') halfDays++;
       else if (rec.status === 'Overtime') overtimeAttendanceCount++;
@@ -137,29 +139,40 @@ class SalaryService {
 
     const totalOvertimeDays = overtimeAttendanceCount + approvedOvertimeDays;
 
-    // 4. Absent Policy:
-    // First 5 Absent days are Paid Leave (0 deduction).
-    // From 6th Absent onward: deduct 1 Full Per Day Salary for every additional Absent.
-    const excusedAbsentDays = Math.min(absentDays, 5);
-    const chargeableAbsentDays = Math.max(0, absentDays - 5);
-    const absentDeduction = Math.round((chargeableAbsentDays * perDaySalary) * 100) / 100;
+    // 4. Company 3-Leave Exemption Policy:
+    // First 3 leave days in a month are FREE / EXEMPTED (0 deduction).
+    // If total leave exceeds 3 days, deduct salary ONLY for leave days beyond 3.
+    // Formula:
+    // Total Leave Days = Count of ('Leave' + 'Absent') records in month
+    // Free / Exempted Leave Days = MIN(3, Total Leave Days)
+    // Deductible Leave Days = MAX(0, Total Leave Days - 3)
+    // Leave Deduction = Deductible Leave Days × Per Day Salary
+    const totalLeaveDays = absentDays + leaveDays;
+    const exemptedLeaveDays = Math.min(3, totalLeaveDays);
+    const freeLeaveDays = exemptedLeaveDays;
+    const deductibleLeaveDays = Math.max(0, totalLeaveDays - 3);
+    const leaveDeduction = Math.round((deductibleLeaveDays * perDaySalary) * 100) / 100;
+
+    // Backward compatibility aliases
+    const excusedAbsentDays = exemptedLeaveDays;
+    const chargeableAbsentDays = deductibleLeaveDays;
+    const absentDeduction = leaveDeduction;
 
     // 5. Late Policy:
     // First 3 Late entries are fully excused.
     // From 4th Late onward: each Late = Half Day deduction (0.5 * perDaySalary).
-    const excusedLateCount = Math.min(lateCount, 3);
+    const excusedLateCount = Math.min(3, lateCount);
     const chargeableLateCount = Math.max(0, lateCount - 3);
     const lateDeduction = Math.round((chargeableLateCount * 0.5 * perDaySalary) * 100) / 100;
 
-    // Half day deduction (if logged directly as Half Day)
+    // Half day deduction: Half Day Deduction = Total Half Days × (0.5 × Per Day Salary)
     const halfDayDeduction = Math.round((halfDays * 0.5 * perDaySalary) * 100) / 100;
 
     // 6. Overtime Policy:
-    // Every Overtime Day earns Half of the Per Day Salary (perDaySalary / 2).
     const overtimePay = Math.round((totalOvertimeDays * (perDaySalary / 2)) * 100) / 100;
 
-    // 7. Deductions & Final Salary:
-    const totalDeductions = Math.round((absentDeduction + lateDeduction + halfDayDeduction) * 100) / 100;
+    // 7. Deductions & Final Net Salary:
+    const totalDeductions = Math.round((leaveDeduction + halfDayDeduction + lateDeduction) * 100) / 100;
     const finalSalary = Math.max(0, Math.round((monthlySalary - totalDeductions + overtimePay) * 100) / 100);
 
     return {
@@ -178,6 +191,12 @@ class SalaryService {
       perDaySalary,
       presentDays,
       absentDays,
+      leaveDays,
+      totalLeaveDays,
+      exemptedLeaveDays,
+      freeLeaveDays,
+      deductibleLeaveDays,
+      leaveDeduction,
       excusedAbsentDays,
       chargeableAbsentDays,
       absentDeduction,
@@ -213,6 +232,14 @@ class SalaryService {
       perDaySalary: calc.perDaySalary,
       presentDays: calc.presentDays,
       absentDays: calc.absentDays,
+      leaveDays: calc.leaveDays,
+      totalLeaveDays: calc.totalLeaveDays,
+      exemptedLeaveDays: calc.exemptedLeaveDays,
+      freeLeaveDays: calc.freeLeaveDays,
+      deductibleLeaveDays: calc.deductibleLeaveDays,
+      leaveDeduction: calc.leaveDeduction,
+      halfDays: calc.halfDays,
+      halfDayDeduction: calc.halfDayDeduction,
       excusedAbsentDays: calc.excusedAbsentDays,
       chargeableAbsentDays: calc.chargeableAbsentDays,
       absentDeduction: calc.absentDeduction,
