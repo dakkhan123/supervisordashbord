@@ -46,7 +46,7 @@ const SalarySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  totalLeaveDays: {
+  leaveDays: {
     type: Number,
     default: 0
   },
@@ -54,11 +54,7 @@ const SalarySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  freeLeaveDays: {
-    type: Number,
-    default: 0
-  },
-  deductibleLeaveDays: {
+  chargeableLeaveDays: {
     type: Number,
     default: 0
   },
@@ -83,6 +79,10 @@ const SalarySchema = new mongoose.Schema({
     default: 0
   },
   absentDeduction: {
+    type: Number,
+    default: 0
+  },
+  otherDeduction: {
     type: Number,
     default: 0
   },
