@@ -86,7 +86,7 @@ class InventoryService {
         type: 'in',
         qty,
         gst,
-        op: op || 'Rajesh Kumar',
+        op: op || 'System',
         loc,
         val: qty * val
       });
@@ -147,7 +147,7 @@ class InventoryService {
         type: delta > 0 ? 'in' : 'out',
         qty: Math.abs(delta),
         gst: updatedItem.gst,
-        op: op || 'Rajesh Kumar',
+        op: op || 'System',
         loc: updatedItem.loc,
         val: Math.abs(delta) * updatedItem.val
       });
@@ -158,7 +158,7 @@ class InventoryService {
     if (delta === 0) {
       await Notification.create({
         title: 'Item Details Updated',
-        message: `Catalog details for "${updatedItem.name}" (SKU: ${updatedItem.sku}) were updated by ${op || 'Rajesh Kumar'}.`,
+        message: `Catalog details for "${updatedItem.name}" (SKU: ${updatedItem.sku}) were updated by ${op || 'System'}.`,
         type: 'item_updated',
         itemId: updatedItem._id
       });

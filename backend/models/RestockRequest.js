@@ -22,7 +22,7 @@ const RestockRequestSchema = new mongoose.Schema({
   },
   op: {
     type: String,
-    default: 'Rajesh Kumar'
+    default: 'System'
   },
   status: {
     type: String,

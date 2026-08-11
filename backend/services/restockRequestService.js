@@ -19,7 +19,7 @@ class RestockRequestService {
       itemName,
       qty,
       supplier,
-      op: op || 'Rajesh Kumar'
+      op: op || 'System'
     });
 
     await Notification.create({
@@ -32,7 +32,7 @@ class RestockRequestService {
     return req;
   }
 
-  async approveRequest(id, opName = 'Rajesh Kumar') {
+  async approveRequest(id, opName = 'System') {
     const req = await RestockRequest.findById(id);
     if (!req) {
       const error = new Error('Restock request not found');
