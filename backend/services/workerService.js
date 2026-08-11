@@ -80,6 +80,43 @@ class WorkerService {
     return await Worker.findById(worker._id).populate('user', 'username email status role');
   }
 
+  async generateUniqueEmployeeId(preferredId = null) {
+    if (preferredId && preferredId.trim()) {
+      const cleanId = preferredId.trim();
+      const existingUser = await User.findOne({ employeeId: cleanId });
+      const existingWorker = await Worker.findOne({ employeeId: cleanId });
+      if (!existingUser && !existingWorker) {
+        return cleanId;
+      }
+    }
+
+    const users = await User.find({ employeeId: { $regex: /^EMP-\d+$/i } }, 'employeeId');
+    const workers = await Worker.find({ employeeId: { $regex: /^EMP-\d+$/i } }, 'employeeId');
+
+    let maxNum = 1000;
+    const allDocs = [...users, ...workers];
+    for (const doc of allDocs) {
+      if (doc.employeeId) {
+        const match = doc.employeeId.match(/^EMP-(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+    }
+
+    let nextId = `EMP-${maxNum + 1}`;
+    while (
+      (await User.findOne({ employeeId: nextId })) ||
+      (await Worker.findOne({ employeeId: nextId }))
+    ) {
+      maxNum++;
+      nextId = `EMP-${maxNum + 1}`;
+    }
+
+    return nextId;
+  }
+
   async createWorker(workerData) {
     // If workerData attempts to set role to Supervisor, prevent privilege escalation
     if (workerData.role && workerData.role.toLowerCase() === 'supervisor') {
@@ -87,6 +124,9 @@ class WorkerService {
       error.statusCode = 403;
       throw error;
     }
+
+    const uniqueEmpId = await this.generateUniqueEmployeeId(workerData.employeeId);
+    workerData.employeeId = uniqueEmpId;
 
     const worker = await Worker.create(workerData);
 
@@ -101,7 +141,7 @@ class WorkerService {
       user = await User.create({
         username,
         email: workerData.email || `${username}@factory.com`,
-        employeeId: workerData.employeeId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
+        employeeId: uniqueEmpId,
         password: hashedPassword,
         role: 'Worker',
         department: workerData.department || 'Operations',
@@ -113,6 +153,7 @@ class WorkerService {
       user.worker = worker._id;
       user.role = 'Worker';
       user.status = workerData.status || 'Active';
+      if (!user.employeeId) user.employeeId = uniqueEmpId;
       if (workerData.password && workerData.password.trim()) {
         user.password = hashedPassword;
       }
@@ -120,7 +161,7 @@ class WorkerService {
     }
 
     worker.user = user._id;
-    if (!worker.employeeId && user.employeeId) worker.employeeId = user.employeeId;
+    if (!worker.employeeId) worker.employeeId = user.employeeId || uniqueEmpId;
     if (!worker.email && user.email) worker.email = user.email;
     await worker.save();
 
@@ -161,10 +202,6 @@ class WorkerService {
       if (workerData.username && workerData.username.trim()) {
         user.username = workerData.username.toLowerCase().trim();
       }
-      if (workerData.password && workerData.password.trim()) {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(workerData.password.trim(), salt);
-      }
       if (workerData.status) user.status = workerData.status;
       if (workerData.phone) user.phone = workerData.phone;
       if (workerData.email) user.email = workerData.email;
@@ -196,45 +233,9 @@ class WorkerService {
   }
 
   async resetWorkerPassword(id, newPassword) {
-    const worker = await this.checkNotSupervisor(id);
-
-    const passToUse = (newPassword && newPassword.trim()) ? newPassword.trim() : 'Worker@123';
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(passToUse, salt);
-
-    let user;
-    if (worker.user) {
-      user = await User.findById(worker.user);
-    }
-    if (!user) {
-      const username = worker.name.toLowerCase().replace(/\s+/g, '');
-      user = await User.findOne({ $or: [{ username }, { worker: worker._id }] });
-    }
-
-    if (!user) {
-      const username = worker.name.toLowerCase().replace(/\s+/g, '');
-      user = await User.create({
-        username,
-        email: worker.email || `${username}@factory.com`,
-        password: hashedPassword,
-        role: 'Worker',
-        status: worker.status || 'Active',
-        worker: worker._id
-      });
-      worker.user = user._id;
-      await worker.save();
-    } else {
-      user.password = hashedPassword;
-      user.role = 'Worker';
-      user.status = worker.status || 'Active';
-      await user.save();
-      if (!worker.user) {
-        worker.user = user._id;
-        await worker.save();
-      }
-    }
-
-    return { message: `Password for ${worker.name} reset successfully` };
+    const error = new Error('Access Denied: Supervisors are not authorized to reset worker passwords directly.');
+    error.statusCode = 403;
+    throw error;
   }
 
   async deleteWorker(id) {
@@ -300,6 +301,7 @@ class WorkerService {
     }
 
     const targetBranch = pending.branch || 'Pune Head Office';
+    const approvedEmpId = await this.generateUniqueEmployeeId();
 
     // Check if user already exists
     let user = await User.findOne({
@@ -310,6 +312,7 @@ class WorkerService {
       user = await User.create({
         username: pending.username,
         email: pending.email,
+        employeeId: approvedEmpId,
         password: pending.passwordHash,
         phone: pending.mobile,
         department: pending.department,
@@ -322,6 +325,7 @@ class WorkerService {
     } else {
       user.status = 'Active';
       user.role = 'Worker';
+      if (!user.employeeId) user.employeeId = approvedEmpId;
       user.branch = targetBranch;
       user.unit = targetBranch;
       user.isEmailVerified = true;
@@ -336,6 +340,7 @@ class WorkerService {
         name: pending.fullName,
         email: pending.email,
         username: pending.username,
+        employeeId: user.employeeId || approvedEmpId,
         phone: pending.mobile,
         salary: numSalary,
         department: pending.department,
@@ -352,6 +357,7 @@ class WorkerService {
     } else {
       worker.name = pending.fullName;
       worker.salary = numSalary;
+      if (!worker.employeeId) worker.employeeId = user.employeeId || approvedEmpId;
       worker.department = pending.department;
       worker.branch = targetBranch;
       worker.assignedSite = targetBranch;

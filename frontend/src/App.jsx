@@ -36,6 +36,7 @@ import WorkerAttendance from './pages/worker/WorkerAttendance';
 import WorkerLeaveRequests from './pages/worker/WorkerLeaveRequests';
 import WorkerSalary from './pages/worker/WorkerSalary';
 import WorkerProfile from './pages/worker/WorkerProfile';
+import WorkerSettings from './pages/worker/WorkerSettings';
 
 function AppContent() {
   const location = useLocation();
@@ -412,7 +413,7 @@ function AppContent() {
                 path="/worker/profile"
                 element={
                   <ProtectedRoute allowedRoles={['Worker']}>
-                    <WorkerProfile showToast={showToast} />
+                    <WorkerProfile showToast={showToast} user={user} />
                   </ProtectedRoute>
                 }
               />
@@ -428,7 +429,7 @@ function AppContent() {
                 path="/worker/settings"
                 element={
                   <ProtectedRoute allowedRoles={['Worker']}>
-                    <WorkerProfile showToast={showToast} />
+                    <WorkerSettings showToast={showToast} user={user} onUserUpdate={checkUserSession} />
                   </ProtectedRoute>
                 }
               />

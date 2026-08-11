@@ -97,7 +97,6 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     setWorkerForm({
       name: '',
       username: '',
-      password: '',
       phone: '',
       role: 'Worker',
       salary: 15000,
@@ -112,7 +111,6 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     setWorkerForm({
       name: worker.name || '',
       username: worker.user?.username || (worker.name ? worker.name.toLowerCase().replace(/\s+/g, '') : ''),
-      password: '',
       phone: worker.phone || '',
       role: worker.role || 'Worker',
       salary: worker.salary || 15000,
@@ -166,22 +164,6 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     } catch (err) {
       console.error(err);
       showToast('Failed to connect to server', 'error');
-    }
-  };
-
-  const handleResetPassword = async (worker) => {
-    const newPass = window.prompt(`Enter new password for ${worker.name}:`, 'Worker@123');
-    if (!newPass) return;
-    try {
-      const res = await api.resetWorkerPassword(worker._id, newPass);
-      if (res.success) {
-        showToast(`Password for ${worker.name} reset successfully`, 'success');
-      } else {
-        showToast(res.error || 'Failed to reset password', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Error resetting password', 'error');
     }
   };
 
@@ -443,7 +425,7 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-[13px] text-on-surface truncate">{w.name}</p>
-                        <p className="text-[10px] text-outline mt-0.5 truncate">{w.role} · <span className="text-teal-400 font-bold">{w.branch || w.assignedSite || 'Pune Head Office'}</span></p>
+                        <p className="text-[10px] text-outline mt-0.5 truncate"><strong className="font-mono text-primary font-bold">ID: {w.employeeId || w.user?.employeeId || 'EMP-XXXX'}</strong> · {w.role} · <span className="text-teal-400 font-bold">{w.branch || w.assignedSite || 'Pune Head Office'}</span></p>
                       </div>
                     </div>
                     {w.status === 'Active' && perf && (
@@ -474,13 +456,16 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                       {selectedWorker.name.charAt(0)}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2.5 justify-center md:justify-start">
+                      <div className="flex items-center gap-2.5 justify-center md:justify-start flex-wrap">
                         <h2 className="text-xl font-extrabold text-on-surface">{selectedWorker.name}</h2>
+                        <span className="px-2.5 py-0.5 rounded text-[10px] font-extrabold font-mono uppercase bg-primary/10 text-primary border border-primary/20">
+                          ID: {selectedWorker.employeeId || selectedWorker.user?.employeeId || 'EMP-XXXX'}
+                        </span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${getStatusBadge(selectedWorker.status)}`}>
                           {selectedWorker.status}
                         </span>
                       </div>
-                      <p className="text-xs font-semibold text-outline mt-1">{selectedWorker.role} · <strong className="text-teal-400 font-bold">{selectedWorker.branch || selectedWorker.assignedSite || 'Pune Head Office'}</strong></p>
+                      <p className="text-xs font-semibold text-outline mt-1"><strong className="font-mono text-primary font-bold">Employee ID: {selectedWorker.employeeId || selectedWorker.user?.employeeId || 'EMP-XXXX'}</strong> · {selectedWorker.role} · <strong className="text-teal-400 font-bold">{selectedWorker.branch || selectedWorker.assignedSite || 'Pune Head Office'}</strong></p>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-4 text-[12px] text-on-surface-variant font-medium">
                         <p className="flex items-center gap-1.5">
@@ -513,12 +498,6 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                         {selectedWorker.status === 'Active' ? 'do_not_disturb_on' : 'check_circle'}
                       </span>
                       {selectedWorker.status === 'Active' ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => handleResetPassword(selectedWorker)}
-                      className="btn border border-amber-500/30 hover:bg-amber-500/10 text-amber-700 text-[10px] font-bold px-3 py-1.5 rounded-sm transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">lock_reset</span>Reset Pass
                     </button>
                     <button
                       onClick={() => handleOpenEditModal(selectedWorker)}
@@ -843,14 +822,13 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">
-                      {editWorker ? 'Set New Password (Optional)' : 'Worker Password'}
+                      Employee ID {editWorker ? '(System Identifier)' : '(Auto-Generated)'}
                     </label>
                     <input
-                      type="password"
-                      value={workerForm.password || ''}
-                      onChange={(e) => setWorkerForm(prev => ({ ...prev, password: e.target.value }))}
-                      placeholder={editWorker ? 'Leave blank to keep current' : 'e.g. Worker@123'}
-                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      type="text"
+                      value={editWorker ? (editWorker.employeeId || editWorker.user?.employeeId || 'EMP-XXXX') : 'System Assigned on Save'}
+                      disabled
+                      className="w-full px-3 py-2 bg-surface-low/80 border border-outline-variant/60 rounded-sm text-sm font-mono font-bold text-primary cursor-not-allowed opacity-80"
                     />
                   </div>
                 </div>

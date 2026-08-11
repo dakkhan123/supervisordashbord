@@ -313,8 +313,9 @@ const Salary = ({ showToast }) => {
                 <span className="material-symbols-outlined text-[14px] text-primary">verified</span>
                 Calculation Rules Summary
               </span>
-              <p>• <strong>Per Day Salary:</strong> Monthly Salary ÷ Days in Month</p>
-              <p>• <strong>Absent Policy:</strong> First 5 days excused (Paid). Deduct 1 Per Day Salary from 6th Absent onward.</p>
+              <p>• <strong>Per Day Salary:</strong> Monthly Salary ÷ Total Days in Month</p>
+              <p>• <strong>Net Salary Basis:</strong> Base pay is computed strictly from actual payable attendance days (Present + 0.5 × Half Days + Exempted Leaves).</p>
+              <p>• <strong>Leave Policy:</strong> First 3 leave days excused (Paid). From 4th leave onward, deduct 1 Per Day Salary per leave.</p>
               <p>• <strong>Late Policy:</strong> First 3 excused. From 4th Late, each Late = Half Day deduction (0.5 × Per Day Salary).</p>
               <p>• <strong>Overtime:</strong> Earns 0.5 × Per Day Salary per Overtime Day.</p>
             </div>

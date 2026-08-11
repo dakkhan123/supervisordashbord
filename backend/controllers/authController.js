@@ -733,6 +733,19 @@ class AuthController {
         }
       }
 
+      // Ensure employeeId consistency
+      let empId = user.employeeId || (user.worker ? user.worker.employeeId : null);
+      if (!empId) {
+        const workerService = require('../services/workerService');
+        empId = await workerService.generateUniqueEmployeeId();
+        user.employeeId = empId;
+        await user.save();
+        if (user.worker) {
+          user.worker.employeeId = empId;
+          await user.worker.save();
+        }
+      }
+
       const userRole = user.role || '';
       const isAuthorized = userRole.toLowerCase() === 'owner' || userRole.toLowerCase() === 'supervisor';
 
@@ -745,23 +758,29 @@ class AuthController {
         success: true,
         data: {
           id: user._id,
+          employeeId: empId,
+          name: profileName,
           username: user.username,
           email: user.email,
+          phone: profilePhone,
           role: user.role,
-          branch: user.branch || user.unit || 'Pune Head Office',
+          branch: user.branch || user.unit || (user.worker ? user.worker.branch : 'Pune Head Office'),
           department: profileDepartment,
           unit: user.branch || user.unit || 'Pune Head Office',
-          address: user.address || 'Plot No. 42, Hinjewadi Phase 3, Pune, MH - 411057',
-          dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().split('T')[0] : '1990-01-01',
-          dateOfJoining: profileDateOfJoining ? new Date(profileDateOfJoining).toISOString().split('T')[0] : '2024-01-15',
-          photo: user.photo || null,
-          status: user.status,
+          address: user.address || (user.worker ? user.worker.address : '') || '',
+          dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().split('T')[0] : (user.worker && user.worker.dateOfBirth ? new Date(user.worker.dateOfBirth).toISOString().split('T')[0] : ''),
+          dateOfJoining: profileDateOfJoining ? new Date(profileDateOfJoining).toISOString().split('T')[0] : '',
+          photo: user.photo || (user.worker ? user.worker.photo : null) || null,
+          status: user.status || 'Active',
           isEmailVerified: user.isEmailVerified,
+          settings: user.settings || {},
           worker: user.worker ? {
             id: user.worker._id,
+            employeeId: user.worker.employeeId || empId,
             name: user.worker.name,
             phone: user.worker.phone,
             role: user.worker.role,
+            department: user.worker.department,
             branch: user.worker.branch || user.worker.assignedSite || 'Pune Head Office',
             ...(isAuthorized ? { salary: user.worker.salary } : {}),
             status: user.worker.status
@@ -782,7 +801,7 @@ class AuthController {
       if (requestedId && requestedId.toString() !== authenticatedId) {
         return res.status(403).json({
           success: false,
-          error: "Forbidden: You are not authorized to edit another supervisor's profile."
+          error: "Forbidden: You are not authorized to edit another user's profile."
         });
       }
 
@@ -794,6 +813,7 @@ class AuthController {
         });
       }
 
+      const isWorker = (user.role || '').toLowerCase() === 'worker';
       const { name, email, phone, dateOfBirth, dateOfJoining, address, unit, photo, department } = req.body;
 
       if (phone !== undefined) {
@@ -821,11 +841,15 @@ class AuthController {
 
       if (name !== undefined) user.name = name.trim();
       if (dateOfBirth !== undefined && dateOfBirth) user.dateOfBirth = new Date(dateOfBirth);
-      if (dateOfJoining !== undefined && dateOfJoining) user.dateOfJoining = new Date(dateOfJoining);
       if (address !== undefined) user.address = address.trim();
-      if (unit !== undefined) user.unit = unit.trim();
       if (photo !== undefined) user.photo = photo;
-      if (department !== undefined) user.department = department.trim();
+
+      // Protected fields: ONLY non-worker roles can modify department, joining date, unit
+      if (!isWorker) {
+        if (dateOfJoining !== undefined && dateOfJoining) user.dateOfJoining = new Date(dateOfJoining);
+        if (unit !== undefined) user.unit = unit.trim();
+        if (department !== undefined) user.department = department.trim();
+      }
 
       await user.save();
 
@@ -835,33 +859,123 @@ class AuthController {
         if (name !== undefined) workerUpdate.name = name.trim();
         if (email !== undefined) workerUpdate.email = email.toLowerCase().trim();
         if (phone !== undefined) workerUpdate.phone = user.phone;
-        if (department !== undefined) workerUpdate.department = department.trim();
-        if (dateOfJoining !== undefined && dateOfJoining) workerUpdate.dateOfJoining = new Date(dateOfJoining);
+        if (!isWorker) {
+          if (department !== undefined) workerUpdate.department = department.trim();
+          if (dateOfJoining !== undefined && dateOfJoining) workerUpdate.dateOfJoining = new Date(dateOfJoining);
+        }
         await Worker.findByIdAndUpdate(user.worker, workerUpdate);
       }
 
       const profileName = user.name || user.username;
       const profilePhone = user.phone || '';
       const profileDepartment = user.department || 'Operations';
+      const empId = user.employeeId || 'EMP-1001';
 
       res.status(200).json({
         success: true,
         message: 'Profile updated successfully!',
         data: {
           id: user._id,
+          employeeId: empId,
           name: profileName,
           username: user.username,
           email: user.email,
           phone: profilePhone,
           role: user.role,
           department: profileDepartment,
-          unit: user.unit || 'Unit Pune-A12',
+          unit: user.unit || user.branch || 'Pune Head Office',
+          branch: user.branch || user.unit || 'Pune Head Office',
           address: user.address || '',
           dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().split('T')[0] : '',
           dateOfJoining: user.dateOfJoining ? user.dateOfJoining.toISOString().split('T')[0] : '',
           photo: user.photo || null,
           status: user.status
         }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateSettings(req, res, next) {
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User account not found' });
+      }
+
+      const { emailNotifications, taskNotifications, attendanceNotifications, leaveNotifications, pushNotifications, taskAlerts, darkMode } = req.body;
+
+      if (!user.settings) {
+        user.settings = {};
+      }
+
+      if (emailNotifications !== undefined) user.settings.emailNotifications = Boolean(emailNotifications);
+      if (taskNotifications !== undefined) user.settings.taskNotifications = Boolean(taskNotifications);
+      if (attendanceNotifications !== undefined) user.settings.attendanceNotifications = Boolean(attendanceNotifications);
+      if (leaveNotifications !== undefined) user.settings.leaveNotifications = Boolean(leaveNotifications);
+      if (pushNotifications !== undefined) user.settings.pushNotifications = Boolean(pushNotifications);
+      if (taskAlerts !== undefined) user.settings.taskAlerts = Boolean(taskAlerts);
+      if (darkMode !== undefined) user.settings.darkMode = Boolean(darkMode);
+
+      user.markModified('settings');
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Settings updated successfully!',
+        settings: user.settings
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async changePassword(req, res, next) {
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User account not found' });
+      }
+
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Current password and new password are required.'
+        });
+      }
+
+      if (confirmPassword && newPassword !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'New password and confirm password do not match.'
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: 'New password must be at least 6 characters long.'
+        });
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({
+          success: false,
+          error: 'Current password is incorrect. Please try again.'
+        });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword.trim(), salt);
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Password updated successfully!'
       });
     } catch (err) {
       next(err);

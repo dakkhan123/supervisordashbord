@@ -159,6 +159,22 @@ export const api = {
     return res.json();
   },
 
+  updateSettings: async (settingsData) => {
+    const res = await authFetch(`${API_URL}/auth/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(settingsData)
+    });
+    return res.json();
+  },
+
+  changePassword: async (passwordData) => {
+    const res = await authFetch(`${API_URL}/auth/change-password`, {
+      method: 'PUT',
+      body: JSON.stringify(passwordData)
+    });
+    return res.json();
+  },
+
   // Leave & Half-Day Request APIs
   createLeaveRequest: async (requestData) => {
     const res = await authFetch(`${API_URL}/leave/request`, {
@@ -593,12 +609,8 @@ export const api = {
     return res.json();
   },
 
-  resetWorkerPassword: async (id, newPassword) => {
-    const res = await authFetch(`${API_URL}/workers/${id}/reset-password`, {
-      method: 'POST',
-      body: JSON.stringify({ newPassword })
-    });
-    return res.json();
+  resetWorkerPassword: async () => {
+    return { success: false, error: 'Access Denied: Supervisors cannot reset worker passwords directly. Workers must use self-service Forgot Password.' };
   },
 
   // Worker Task extensions

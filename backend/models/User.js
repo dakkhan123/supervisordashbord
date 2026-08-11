@@ -91,6 +91,10 @@ const UserSchema = new mongoose.Schema({
     darkMode: { type: Boolean, default: false },
     fontSize: { type: String, enum: ['sm', 'base', 'lg', 'xl'], default: 'base' },
     language: { type: String, default: 'en' },
+    emailNotifications: { type: Boolean, default: true },
+    taskNotifications: { type: Boolean, default: true },
+    attendanceNotifications: { type: Boolean, default: true },
+    leaveNotifications: { type: Boolean, default: true },
     taskAlerts: { type: Boolean, default: true },
     pushNotifications: { type: Boolean, default: true }
   }

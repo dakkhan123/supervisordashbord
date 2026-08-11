@@ -37,8 +37,6 @@ workersRouter.route('/:id')
   .delete(workerController.deleteWorker);
 workersRouter.route('/:id/status')
   .patch(workerController.toggleWorkerStatus);
-workersRouter.route('/:id/reset-password')
-  .post(workerController.resetWorkerPassword);
 
 module.exports = {
   router: attendanceRouter,

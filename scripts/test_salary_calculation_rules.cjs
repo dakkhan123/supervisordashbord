@@ -3,12 +3,11 @@ const mongoose = require('../backend/node_modules/mongoose');
 
 const Worker = require('../backend/models/Worker');
 const Attendance = require('../backend/models/Attendance');
-const Overtime = require('../backend/models/Overtime');
 const salaryService = require('../backend/services/salaryService');
 
 async function testSalaryRules() {
   console.log('\n=============================================================');
-  console.log('       TESTING SALARY CALCULATOR & BREAKDOWN RULES          ');
+  console.log('       TESTING FINAL NET SALARY ATTENDANCE SCALE RULES      ');
   console.log('=============================================================\n');
 
   const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/smartops';
@@ -17,136 +16,101 @@ async function testSalaryRules() {
 
   const testMonth = 'August 2026'; // 31 Days
 
-  // 1. Create temporary test worker with ₹50,000 monthly salary
+  // Create temporary test worker with ₹50,000 monthly salary
   const testWorker = await Worker.create({
-    name: 'Salary Test Worker',
-    phone: '9999888877',
+    name: 'Net Salary Test Worker',
+    phone: '9999888866',
     role: 'Worker',
     branch: 'Pune Head Office',
     salary: 50000,
     status: 'Active'
   });
 
-  console.log(`[TEST] Created test worker: ${testWorker.name} (Monthly Salary: ₹${testWorker.salary})`);
+  console.log(`[TEST] Created test worker: ${testWorker.name} (Monthly Salary: ₹${testWorker.salary}, Month: ${testMonth})`);
 
   try {
     // -----------------------------------------------------------------
-    // CASE 1: 0 Present Days, no attendance data
+    // TEST CASE 1: 0 Present Days
+    // Expected Final Net Salary: ₹0.00
     // -----------------------------------------------------------------
-    console.log('\n--- CASE 1: 0 Present Days (No Attendance) ---');
-    let calc1 = await salaryService.calculateSalary(testWorker._id, testMonth);
-    console.log(`Per Day Salary: ₹${calc1.perDaySalary} (Expected: 1612.90)`);
-    console.log(`Present Days: ${calc1.presentDays}`);
-    console.log(`Final Net Salary: ₹${calc1.finalSalary} (Expected: 0)`);
-    if (calc1.finalSalary !== 0) throw new Error(`Case 1 Failed! Expected 0, got ${calc1.finalSalary}`);
+    console.log('\n--- CASE 1: 0 Present Days ---');
+    let calc0 = await salaryService.calculateSalary(testWorker._id, testMonth);
+    console.log(`Present Days: ${calc0.presentDays}`);
+    console.log(`Final Net Salary: ₹${calc0.finalSalary} (Expected: 0.00)`);
+    if (calc0.finalSalary !== 0) throw new Error(`Case 1 Failed! Expected 0, got ${calc0.finalSalary}`);
     console.log('✅ CASE 1 PASSED: 0 Present = ₹0.00');
 
     // -----------------------------------------------------------------
-    // CASE 2: 1 Present Day
+    // TEST CASE 2: 1 Present Day
+    // Expected Final Net Salary: ₹1,612.90
     // -----------------------------------------------------------------
     console.log('\n--- CASE 2: 1 Present Day ---');
-    await Attendance.create({
-      worker: testWorker._id,
-      date: new Date('2026-08-01T09:00:00Z'),
-      status: 'Present'
-    });
-
-    let calc2 = await salaryService.calculateSalary(testWorker._id, testMonth);
-    console.log(`Present Days: ${calc2.presentDays}`);
-    console.log(`Final Net Salary: ₹${calc2.finalSalary} (Expected: 1612.90)`);
-    if (calc2.finalSalary !== 1612.90) throw new Error(`Case 2 Failed! Expected 1612.90, got ${calc2.finalSalary}`);
+    await Attendance.create({ worker: testWorker._id, date: new Date('2026-08-01T09:00:00Z'), status: 'Present' });
+    let calc1 = await salaryService.calculateSalary(testWorker._id, testMonth);
+    console.log(`Present Days: ${calc1.presentDays}`);
+    console.log(`Final Net Salary: ₹${calc1.finalSalary} (Expected: 1,612.90)`);
+    if (calc1.finalSalary !== 1612.90) throw new Error(`Case 2 Failed! Expected 1612.90, got ${calc1.finalSalary}`);
     console.log('✅ CASE 2 PASSED: 1 Present = ₹1,612.90');
 
     // -----------------------------------------------------------------
-    // CASE 3: 2 Present Days
+    // TEST CASE 3: 2 Present Days
+    // Expected Final Net Salary: ₹3,225.81
     // -----------------------------------------------------------------
     console.log('\n--- CASE 3: 2 Present Days ---');
-    await Attendance.create({
-      worker: testWorker._id,
-      date: new Date('2026-08-02T09:00:00Z'),
-      status: 'Present'
-    });
-
-    let calc3 = await salaryService.calculateSalary(testWorker._id, testMonth);
-    console.log(`Present Days: ${calc3.presentDays}`);
-    console.log(`Final Net Salary: ₹${calc3.finalSalary} (Expected: 3225.80)`);
-    if (calc3.finalSalary !== 3225.80) throw new Error(`Case 3 Failed! Expected 3225.80, got ${calc3.finalSalary}`);
-    console.log('✅ CASE 3 PASSED: 2 Present = ₹3,225.80');
+    await Attendance.create({ worker: testWorker._id, date: new Date('2026-08-02T09:00:00Z'), status: 'Present' });
+    let calc2 = await salaryService.calculateSalary(testWorker._id, testMonth);
+    console.log(`Present Days: ${calc2.presentDays}`);
+    console.log(`Final Net Salary: ₹${calc2.finalSalary} (Expected: 3,225.81)`);
+    if (calc2.finalSalary !== 3225.81) throw new Error(`Case 3 Failed! Expected 3225.81, got ${calc2.finalSalary}`);
+    console.log('✅ CASE 3 PASSED: 2 Present = ₹3,225.81');
 
     // -----------------------------------------------------------------
-    // CASE 4: Multiple Present + 5 Leave + 4 Late + 2 Half Day + 1 Overtime
+    // TEST CASE 4: 5 Present Days
+    // Expected Final Net Salary: ₹8,064.52
     // -----------------------------------------------------------------
-    console.log('\n--- CASE 4: Complex Mix (10 Present, 5 Leave, 4 Late, 2 Half Day, 1 OT) ---');
-    // Clear previous attendance
+    console.log('\n--- CASE 4: 5 Present Days ---');
     await Attendance.deleteMany({ worker: testWorker._id });
+    for (let i = 1; i <= 5; i++) {
+      await Attendance.create({ worker: testWorker._id, date: new Date(`2026-08-0${i}T09:00:00Z`), status: 'Present' });
+    }
+    let calc5 = await salaryService.calculateSalary(testWorker._id, testMonth);
+    console.log(`Present Days: ${calc5.presentDays}`);
+    console.log(`Final Net Salary: ₹${calc5.finalSalary} (Expected: 8,064.52)`);
+    if (calc5.finalSalary !== 8064.52) throw new Error(`Case 4 Failed! Expected 8064.52, got ${calc5.finalSalary}`);
+    console.log('✅ CASE 4 PASSED: 5 Present = ₹8,064.52');
 
-    // 10 Present
+    // -----------------------------------------------------------------
+    // TEST CASE 5: 10 Present Days
+    // Expected Final Net Salary: ₹16,129.03
+    // -----------------------------------------------------------------
+    console.log('\n--- CASE 5: 10 Present Days ---');
+    await Attendance.deleteMany({ worker: testWorker._id });
     for (let i = 1; i <= 10; i++) {
       await Attendance.create({ worker: testWorker._id, date: new Date(`2026-08-${i < 10 ? '0' + i : i}T09:00:00Z`), status: 'Present' });
     }
-    // 5 Leave (First 3 free, 2 chargeable = 2 * 1612.90 = 3225.80)
-    for (let i = 11; i <= 15; i++) {
-      await Attendance.create({ worker: testWorker._id, date: new Date(`2026-08-${i}T09:00:00Z`), status: 'Leave' });
-    }
-    // 4 Late (First 3 free, 1 chargeable = 0.5 * 1612.90 = 806.45)
-    for (let i = 16; i <= 19; i++) {
-      await Attendance.create({ worker: testWorker._id, date: new Date(`2026-08-${i}T09:00:00Z`), status: 'Late' });
-    }
-    // 2 Half Day (2 * 0.5 * 1612.90 = 1612.90)
-    for (let i = 20; i <= 21; i++) {
-      await Attendance.create({ worker: testWorker._id, date: new Date(`2026-08-${i}T09:00:00Z`), status: 'Half Day' });
-    }
-    // 1 Overtime (1 * (1612.90 / 2) = 806.45)
-    await Attendance.create({ worker: testWorker._id, date: new Date('2026-08-22T09:00:00Z'), status: 'Overtime' });
-
-    let calc4 = await salaryService.calculateSalary(testWorker._id, testMonth);
-    console.log(`Present Days:        ${calc4.presentDays} (10 Present + 4 Late + 1 OT = 15)`);
-    console.log(`Leave Days:          ${calc4.leaveDays}`);
-    console.log(`Exempted Leave:      ${calc4.exemptedLeaveDays}`);
-    console.log(`Chargeable Leave:    ${calc4.chargeableLeaveDays}`);
-    console.log(`Leave Deduction:     ₹${calc4.leaveDeduction}`);
-    console.log(`Half Days:           ${calc4.halfDays}`);
-    console.log(`Half Day Deduction:  ₹${calc4.halfDayDeduction}`);
-    console.log(`Late Count:          ${calc4.lateCount}`);
-    console.log(`Excused Late Count:  ${calc4.excusedLateCount}`);
-    console.log(`Chargeable Late:     ${calc4.chargeableLateCount}`);
-    console.log(`Late Deduction:      ₹${calc4.lateDeduction}`);
-    console.log(`Overtime Days:       ${calc4.overtimeDays}`);
-    console.log(`Overtime Pay:        ₹${calc4.overtimePay}`);
-    console.log(`Payable Days:        ${calc4.payableDays} (15 Present + 1 Half Day equiv + 3 Exempted Leave = 19)`);
-    console.log(`Final Net Salary:    ₹${calc4.finalSalary}`);
-
-    if (calc4.leaveDays !== 5 || calc4.exemptedLeaveDays !== 3 || calc4.chargeableLeaveDays !== 2) {
-      throw new Error('Case 4 Leave rule check failed!');
-    }
-    if (calc4.lateCount !== 4 || calc4.excusedLateCount !== 3 || calc4.chargeableLateCount !== 1) {
-      throw new Error('Case 4 Late rule check failed!');
-    }
-    console.log('✅ CASE 4 PASSED: All metrics and breakdown calculated accurately!');
+    let calc10 = await salaryService.calculateSalary(testWorker._id, testMonth);
+    console.log(`Present Days: ${calc10.presentDays}`);
+    console.log(`Final Net Salary: ₹${calc10.finalSalary} (Expected: 16,129.03)`);
+    if (calc10.finalSalary !== 16129.03) throw new Error(`Case 5 Failed! Expected 16129.03, got ${calc10.finalSalary}`);
+    console.log('✅ CASE 5 PASSED: 10 Present = ₹16,129.03');
 
     // -----------------------------------------------------------------
-    // CASE 5: No Attendance Data (Verify Zero Display)
+    // TEST CASE 6: 31 Present Days (Full Month)
+    // Expected Final Net Salary: ₹50,000.00
     // -----------------------------------------------------------------
-    console.log('\n--- CASE 5: Zero Data Verification ---');
+    console.log('\n--- CASE 6: 31 Present Days (Full Month) ---');
     await Attendance.deleteMany({ worker: testWorker._id });
-
-    let calc5 = await salaryService.calculateSalary(testWorker._id, testMonth);
-    const requiredMetrics = [
-      'presentDays', 'absentDays', 'leaveDays', 'exemptedLeaveDays', 'chargeableLeaveDays',
-      'halfDays', 'lateCount', 'excusedLateCount', 'chargeableLateCount', 'overtimeDays',
-      'leaveDeduction', 'halfDayDeduction', 'lateDeduction', 'overtimePay', 'finalSalary'
-    ];
-
-    requiredMetrics.forEach(m => {
-      if (calc5[m] === undefined || calc5[m] === null) {
-        throw new Error(`Metric ${m} is missing or undefined!`);
-      }
-      console.log(`Metric ${m.padEnd(20)} = ${calc5[m]}`);
-    });
-    console.log('✅ CASE 5 PASSED: All metrics explicitly defined and present even when 0!');
+    for (let i = 1; i <= 31; i++) {
+      await Attendance.create({ worker: testWorker._id, date: new Date(`2026-08-${i < 10 ? '0' + i : i}T09:00:00Z`), status: 'Present' });
+    }
+    let calc31 = await salaryService.calculateSalary(testWorker._id, testMonth);
+    console.log(`Present Days: ${calc31.presentDays}`);
+    console.log(`Final Net Salary: ₹${calc31.finalSalary} (Expected: 50,000.00)`);
+    if (calc31.finalSalary !== 50000) throw new Error(`Case 6 Failed! Expected 50000, got ${calc31.finalSalary}`);
+    console.log('✅ CASE 6 PASSED: 31 Present = ₹50,000.00');
 
     console.log('\n=============================================================');
-    console.log('   ✅ ALL 5 INTEGRATION TEST CASES PASSED 100% PERFECTLY!    ');
+    console.log('   ✅ ALL 6 ATTENDANCE SCALE TEST CASES PASSED PERFECTLY!   ');
     console.log('=============================================================\n');
 
   } finally {

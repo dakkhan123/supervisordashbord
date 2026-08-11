@@ -104,13 +104,10 @@ class WorkerController {
   }
 
   async resetWorkerPassword(req, res, next) {
-    try {
-      const { newPassword } = req.body;
-      const result = await workerService.resetWorkerPassword(req.params.id, newPassword);
-      res.status(200).json({ success: true, data: result });
-    } catch (err) {
-      next(err);
-    }
+    return res.status(403).json({
+      success: false,
+      error: 'Access Denied: Supervisors are not authorized to reset worker passwords directly. Workers must reset their password via self-service Forgot Password.'
+    });
   }
 
   async deleteWorker(req, res, next) {

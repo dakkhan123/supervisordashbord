@@ -101,7 +101,8 @@ class SalaryService {
 
     // 1. Monthly Salary & Per Day Salary
     const monthlySalary = worker.salary || 0;
-    const perDaySalary = totalDays > 0 ? Number((monthlySalary / totalDays).toFixed(2)) : 0;
+    const exactPerDaySalary = totalDays > 0 ? (monthlySalary / totalDays) : 0;
+    const perDaySalary = Math.round(exactPerDaySalary * 100) / 100;
 
     // 2. Fetch Attendance Records for target month
     const attendanceRecords = await Attendance.find({
@@ -153,31 +154,30 @@ class SalaryService {
     // From 4th Leave onward: deduct 1 Full Per Day Salary for every additional Leave day.
     const exemptedLeaveDays = Math.min(leaveDays, 3);
     const chargeableLeaveDays = Math.max(0, leaveDays - 3);
-    const leaveDeduction = Number((chargeableLeaveDays * perDaySalary).toFixed(2));
+    const leaveDeduction = Math.round((chargeableLeaveDays * exactPerDaySalary) * 100) / 100;
 
     // Absent Policy:
-    // Absent days are unexcused (deducted at 1 full per day salary per absent day).
-    const absentDeduction = Number((absentDays * perDaySalary).toFixed(2));
+    const absentDeduction = Math.round((absentDays * exactPerDaySalary) * 100) / 100;
 
     // 5. Late Policy:
     // First 3 Late entries are fully excused.
     // From 4th Late onward: each Late = Half Day deduction (0.5 * perDaySalary).
     const excusedLateCount = Math.min(lateCount, 3);
     const chargeableLateCount = Math.max(0, lateCount - 3);
-    const lateDeduction = Number((chargeableLateCount * 0.5 * perDaySalary).toFixed(2));
+    const lateDeduction = Math.round((chargeableLateCount * 0.5 * exactPerDaySalary) * 100) / 100;
 
     // Half Day Deduction
-    const halfDayDeduction = Number((halfDays * 0.5 * perDaySalary).toFixed(2));
+    const halfDayDeduction = Math.round((halfDays * 0.5 * exactPerDaySalary) * 100) / 100;
 
     // 6. Overtime Policy:
     // Every Overtime Day earns Half of the Per Day Salary (perDaySalary / 2).
-    const overtimePay = Number((totalOvertimeDays * (perDaySalary / 2)).toFixed(2));
+    const overtimePay = Math.round((totalOvertimeDays * 0.5 * exactPerDaySalary) * 100) / 100;
 
     // 7. Payable Days & Final Net Salary:
     const payableDays = presentDays + (halfDays * 0.5) + exemptedLeaveDays;
-    const baseEarnedSalary = Number((payableDays * perDaySalary).toFixed(2));
-    const totalDeductions = Number((leaveDeduction + halfDayDeduction + lateDeduction + absentDeduction).toFixed(2));
-    const finalSalary = Math.max(0, Number((baseEarnedSalary - lateDeduction + overtimePay).toFixed(2)));
+    const baseEarnedSalary = Math.round((payableDays * exactPerDaySalary) * 100) / 100;
+    const totalDeductions = Math.round((leaveDeduction + halfDayDeduction + lateDeduction + absentDeduction) * 100) / 100;
+    const finalSalary = Math.max(0, Math.round((baseEarnedSalary - lateDeduction + overtimePay) * 100) / 100);
 
     return {
       worker: {
