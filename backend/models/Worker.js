@@ -63,6 +63,16 @@ const WorkerSchema = new mongoose.Schema({
     default: 'Pune Head Office',
     trim: true
   },
+  address: {
+    type: String,
+    trim: true
+  },
+  dateOfBirth: {
+    type: Date
+  },
+  photo: {
+    type: String
+  },
   shiftTiming: {
     type: String,
     default: '9:00 AM - 6:00 PM'

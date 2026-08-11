@@ -127,6 +127,9 @@ class WorkerService {
 
     const uniqueEmpId = await this.generateUniqueEmployeeId(workerData.employeeId);
     workerData.employeeId = uniqueEmpId;
+    if (!workerData.department || !workerData.department.trim()) {
+      workerData.department = 'Operations';
+    }
 
     const worker = await Worker.create(workerData);
 
@@ -139,13 +142,20 @@ class WorkerService {
     let user = await User.findOne({ username });
     if (!user) {
       user = await User.create({
+        name: workerData.name || workerData.fullName || '',
         username,
         email: workerData.email || `${username}@factory.com`,
         employeeId: uniqueEmpId,
         password: hashedPassword,
         role: 'Worker',
         department: workerData.department || 'Operations',
-        phone: workerData.phone || '',
+        branch: workerData.branch || workerData.assignedSite || 'Pune Head Office',
+        unit: workerData.branch || workerData.assignedSite || 'Pune Head Office',
+        phone: workerData.phone || workerData.mobile || '',
+        address: workerData.address || '',
+        dateOfBirth: workerData.dateOfBirth ? new Date(workerData.dateOfBirth) : undefined,
+        dateOfJoining: (workerData.dateOfJoining || workerData.joiningDate) ? new Date(workerData.dateOfJoining || workerData.joiningDate) : new Date(),
+        photo: workerData.photo || '',
         status: workerData.status || 'Active',
         worker: worker._id
       });
@@ -154,6 +164,15 @@ class WorkerService {
       user.role = 'Worker';
       user.status = workerData.status || 'Active';
       if (!user.employeeId) user.employeeId = uniqueEmpId;
+      if (workerData.name || workerData.fullName) user.name = (workerData.name || workerData.fullName).trim();
+      if (workerData.branch || workerData.assignedSite) {
+        user.branch = workerData.branch || workerData.assignedSite;
+        user.unit = workerData.branch || workerData.assignedSite;
+      }
+      if (workerData.address) user.address = workerData.address;
+      if (workerData.photo) user.photo = workerData.photo;
+      if (workerData.dateOfBirth) user.dateOfBirth = new Date(workerData.dateOfBirth);
+      if (workerData.dateOfJoining || workerData.joiningDate) user.dateOfJoining = new Date(workerData.dateOfJoining || workerData.joiningDate);
       if (workerData.password && workerData.password.trim()) {
         user.password = hashedPassword;
       }
@@ -202,10 +221,19 @@ class WorkerService {
       if (workerData.username && workerData.username.trim()) {
         user.username = workerData.username.toLowerCase().trim();
       }
+      if (workerData.name || workerData.fullName) user.name = (workerData.name || workerData.fullName).trim();
       if (workerData.status) user.status = workerData.status;
-      if (workerData.phone) user.phone = workerData.phone;
+      if (workerData.phone || workerData.mobile) user.phone = workerData.phone || workerData.mobile;
       if (workerData.email) user.email = workerData.email;
       if (workerData.department) user.department = workerData.department;
+      if (workerData.branch || workerData.assignedSite) {
+        user.branch = workerData.branch || workerData.assignedSite;
+        user.unit = workerData.branch || workerData.assignedSite;
+      }
+      if (workerData.address) user.address = workerData.address;
+      if (workerData.photo) user.photo = workerData.photo;
+      if (workerData.dateOfBirth) user.dateOfBirth = new Date(workerData.dateOfBirth);
+      if (workerData.dateOfJoining || workerData.joiningDate) user.dateOfJoining = new Date(workerData.dateOfJoining || workerData.joiningDate);
       user.role = 'Worker';
       user.worker = worker._id;
       await user.save();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { BRANCH_OPTIONS, DEPARTMENT_OPTIONS, validateWorkerRegistrationFields } from '../utils/workerFormConfig';
 
 const WorkerRegister = ({ showToast }) => {
   const navigate = useNavigate();
@@ -15,8 +16,8 @@ const WorkerRegister = ({ showToast }) => {
     dateOfBirth: '',
     address: '',
     joiningDate: new Date().toISOString().split('T')[0],
-    department: 'Assembly',
-    branch: 'Pune Head Office',
+    department: DEPARTMENT_OPTIONS[0],
+    branch: BRANCH_OPTIONS[0],
     photo: ''
   });
 
@@ -53,8 +54,14 @@ const WorkerRegister = ({ showToast }) => {
   const handleSubmitForm = async (e) => {
     e.preventDefault();
 
-    if (!form.fullName.trim() || !form.username.trim() || !form.email.trim() || !form.password || !form.mobile.trim() || !form.branch.trim()) {
-      if (showToast) showToast('Please fill in all mandatory fields (including Branch / Office).', 'error');
+    const validation = validateWorkerRegistrationFields(form);
+    if (!validation.isValid) {
+      if (showToast) showToast(validation.error, 'error');
+      return;
+    }
+
+    if (!form.password) {
+      if (showToast) showToast('Password is required.', 'error');
       return;
     }
 
@@ -280,11 +287,9 @@ const WorkerRegister = ({ showToast }) => {
                   className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-bold text-on-surface outline-none focus:border-primary cursor-pointer"
                   required
                 >
-                  <option value="Pune Head Office">Pune Head Office</option>
-                  <option value="Pune Unit A12">Pune Unit A12</option>
-                  <option value="Mumbai Branch">Mumbai Branch</option>
-                  <option value="Nashik Branch">Nashik Branch</option>
-                  <option value="Bangalore Office">Bangalore Office</option>
+                  {BRANCH_OPTIONS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
                 </select>
               </div>
 
@@ -295,11 +300,9 @@ const WorkerRegister = ({ showToast }) => {
                   onChange={(e) => setForm({ ...form, department: e.target.value })}
                   className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-bold text-on-surface outline-none focus:border-primary cursor-pointer"
                 >
-                  <option value="Assembly">Assembly</option>
-                  <option value="Packaging">Packaging</option>
-                  <option value="Logistics">Logistics</option>
-                  <option value="Maintenance">Maintenance</option>
-                  <option value="Operations">Operations</option>
+                  {DEPARTMENT_OPTIONS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
                 </select>
               </div>
             </div>

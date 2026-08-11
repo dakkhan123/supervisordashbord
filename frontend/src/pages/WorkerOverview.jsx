@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
+import { BRANCH_OPTIONS, DEPARTMENT_OPTIONS, validateWorkerRegistrationFields } from '../utils/workerFormConfig';
 
 const WorkerOverview = ({ searchVal, showToast, user }) => {
   const userRole = user?.role || '';
@@ -26,11 +27,17 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
   // Forms
   const [workerForm, setWorkerForm] = useState({
     name: '',
+    username: '',
+    email: '',
     phone: '',
     role: 'Worker',
     salary: 15000,
     status: 'Active',
-    dateOfJoining: new Date().toISOString().split('T')[0]
+    branch: user?.branch || user?.unit || BRANCH_OPTIONS[0],
+    dateOfBirth: '',
+    dateOfJoining: new Date().toISOString().split('T')[0],
+    address: '',
+    photo: ''
   });
 
   const [taskForm, setTaskForm] = useState({
@@ -92,16 +99,36 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     fetchData();
   }, []);
 
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        if (showToast) showToast('Image file size must be less than 2MB', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setWorkerForm((prev) => ({ ...prev, photo: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleOpenAddModal = () => {
     setEditWorker(null);
     setWorkerForm({
       name: '',
       username: '',
+      email: '',
       phone: '',
       role: 'Worker',
       salary: 15000,
       status: 'Active',
-      dateOfJoining: new Date().toISOString().split('T')[0]
+      branch: user?.branch || user?.unit || BRANCH_OPTIONS[0],
+      dateOfBirth: '',
+      dateOfJoining: new Date().toISOString().split('T')[0],
+      address: '',
+      photo: ''
     });
     setWorkerModalOpen(true);
   };
@@ -110,28 +137,56 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     setEditWorker(worker);
     setWorkerForm({
       name: worker.name || '',
-      username: worker.user?.username || (worker.name ? worker.name.toLowerCase().replace(/\s+/g, '') : ''),
-      phone: worker.phone || '',
-      role: worker.role || 'Worker',
-      salary: worker.salary || 15000,
+      username: worker.user?.username || worker.username || (worker.name ? worker.name.toLowerCase().replace(/\s+/g, '') : ''),
+      email: worker.email || worker.user?.email || '',
+      phone: worker.phone || worker.user?.phone || '',
+      role: 'Worker',
+      salary: worker.salary !== undefined ? worker.salary : 15000,
       status: worker.status || 'Active',
-      dateOfJoining: worker.dateOfJoining ? new Date(worker.dateOfJoining).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      branch: worker.branch || worker.assignedSite || user?.branch || BRANCH_OPTIONS[0],
+      dateOfBirth: worker.dateOfBirth ? new Date(worker.dateOfBirth).toISOString().split('T')[0] : '',
+      dateOfJoining: worker.dateOfJoining ? new Date(worker.dateOfJoining).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      address: worker.address || worker.user?.address || '',
+      photo: worker.photo || worker.user?.photo || ''
     });
     setWorkerModalOpen(true);
   };
 
-
   const handleWorkerSubmit = async (e) => {
     e.preventDefault();
-    if (!workerForm.name.trim()) return showToast('Name is required', 'error');
-    if (canEditSalary && workerForm.salary < 0) return showToast('Salary cannot be negative', 'error');
+
+    const validation = validateWorkerRegistrationFields(
+      {
+        ...workerForm,
+        fullName: workerForm.name,
+        mobile: workerForm.phone
+      },
+      { requireDepartment: false }
+    );
+
+    if (!validation.isValid) {
+      if (showToast) showToast(validation.error, 'error');
+      return;
+    }
+
+    if (canEditSalary && (isNaN(Number(workerForm.salary)) || Number(workerForm.salary) < 0)) {
+      if (showToast) showToast('Base Salary cannot be negative.', 'error');
+      return;
+    }
 
     try {
       let res;
-      const formPayload = { ...workerForm };
+      const formPayload = {
+        ...workerForm,
+        role: 'Worker',
+        mobile: workerForm.phone.replace(/\D/g, ''),
+        phone: workerForm.phone.replace(/\D/g, '')
+      };
+
       if (!canEditSalary) {
         delete formPayload.salary;
       }
+
       if (editWorker) {
         res = await api.updateWorker(editWorker._id, formPayload);
       } else {
@@ -139,7 +194,7 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
       }
 
       if (res.success) {
-        showToast(editWorker ? 'Worker profile updated successfully' : 'New worker profile registered', 'success');
+        showToast(editWorker ? 'Worker profile updated successfully' : 'New worker profile registered successfully', 'success');
         setWorkerModalOpen(false);
         fetchData();
       } else {
@@ -781,8 +836,8 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
       {/* Register/Edit Worker Modal */}
       {workerModalOpen && (
         <div className="fixed inset-0 bg-[#0b1c30]/50 backdrop-blur-sm z-[500] flex items-center justify-center p-6 transition-all duration-300">
-          <div className="bg-surface-lowest rounded-lg shadow-xl w-full max-w-[460px] max-h-[90vh] overflow-y-auto animate-scale-up border border-outline-variant/50">
-            <div className="px-6 py-5 border-b border-outline-variant flex items-center justify-between">
+          <div className="bg-surface-lowest rounded-lg shadow-xl w-full max-w-[540px] max-h-[90vh] overflow-y-auto animate-scale-up border border-outline-variant/50">
+            <div className="px-6 py-5 border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-lowest z-10">
               <h2 className="text-lg font-bold text-on-surface">
                 {editWorker ? 'Edit Staff Profile' : 'Register New Staff'}
               </h2>
@@ -796,30 +851,130 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
 
             <form onSubmit={handleWorkerSubmit}>
               <div className="p-6 flex flex-col gap-4 text-left font-sans">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Full Name</label>
-                  <input
-                    type="text"
-                    value={workerForm.name}
-                    onChange={(e) => setWorkerForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g. Ramesh Deshmukh"
-                    className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                    required
-                  />
+
+                {/* Profile Photo Upload Section */}
+                <div className="flex flex-col items-center justify-center gap-2 pb-2">
+                  <div className="relative w-20 h-20 rounded-full border-2 border-outline-variant overflow-hidden bg-surface-low flex items-center justify-center shadow-inner">
+                    {workerForm.photo ? (
+                      <img src={workerForm.photo} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="material-symbols-outlined text-[36px] text-outline">account_circle</span>
+                    )}
+                  </div>
+                  <label className="text-xs font-bold text-primary hover:underline cursor-pointer">
+                    {workerForm.photo ? 'Change Profile Photo' : 'Upload Profile Photo (Optional)'}
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                  </label>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Worker Login ID (Username)</label>
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Full Name *</label>
+                    <input
+                      type="text"
+                      value={workerForm.name}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g. Ramesh Deshmukh"
+                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Username *</label>
                     <input
                       type="text"
                       value={workerForm.username || ''}
                       onChange={(e) => setWorkerForm(prev => ({ ...prev, username: e.target.value }))}
                       placeholder="e.g. ram.patil"
                       className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Email Address *</label>
+                    <input
+                      type="email"
+                      value={workerForm.email || ''}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="e.g. ramesh@factory.com"
+                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                      required
                     />
                   </div>
 
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Mobile Number (10 Digits) *</label>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      value={workerForm.phone || ''}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '') }))}
+                      placeholder="e.g. 9876543210"
+                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono font-medium"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1.5 sm:col-span-2">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Branch / Office *</label>
+                    <select
+                      value={workerForm.branch}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, branch: e.target.value }))}
+                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm font-bold text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
+                      required
+                    >
+                      {BRANCH_OPTIONS.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">System Role</label>
+                    <select
+                      value="Worker"
+                      disabled
+                      className="w-full px-3 py-2 bg-surface-low/80 border border-outline-variant/60 rounded-sm text-sm text-on-surface outline-none font-medium cursor-not-allowed opacity-80"
+                    >
+                      <option value="Worker">Worker</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Base Salary (INR/Month) *</label>
+                    <input
+                      type={canEditSalary ? "number" : "text"}
+                      value={canEditSalary ? (workerForm.salary ?? '') : '••••••'}
+                      onChange={(e) => canEditSalary && setWorkerForm(prev => ({ ...prev, salary: Number(e.target.value) }))}
+                      min={canEditSalary ? "0" : undefined}
+                      className={`w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium ${!canEditSalary ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      required
+                      disabled={!canEditSalary}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Account Status</label>
+                    <select
+                      value={workerForm.status}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium cursor-pointer"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">
                       Employee ID {editWorker ? '(System Identifier)' : '(Auto-Generated)'}
@@ -833,70 +988,42 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Phone Number</label>
-                  <input
-                    type="text"
-                    value={workerForm.phone}
-                    onChange={(e) => setWorkerForm(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="e.g. +91 98765 43210"
-                    className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                  />
-                </div>
-
-
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">System Role</label>
-                    <select
-                      value={workerForm.role}
-                      onChange={(e) => setWorkerForm(prev => ({ ...prev, role: e.target.value }))}
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={workerForm.dateOfBirth}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, dateOfBirth: e.target.value }))}
                       className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                    >
-                      <option value="Worker">Worker</option>
-                      <option value="Supervisor">Supervisor</option>
-                    </select>
+                    />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Base Salary (INR/Month)</label>
+                    <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Date of Joining *</label>
                     <input
-                      type={canEditSalary ? "number" : "text"}
-                      value={canEditSalary ? (workerForm.salary ?? '') : '••••••'}
-                      onChange={(e) => canEditSalary && setWorkerForm(prev => ({ ...prev, salary: Number(e.target.value) }))}
-                      min={canEditSalary ? "0" : undefined}
-                      className={`w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium ${!canEditSalary ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      type="date"
+                      value={workerForm.dateOfJoining}
+                      onChange={(e) => setWorkerForm(prev => ({ ...prev, dateOfJoining: e.target.value }))}
+                      className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
                       required
-                      disabled={!canEditSalary}
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Status</label>
-                  <select
-                    value={workerForm.status}
-                    onChange={(e) => setWorkerForm(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Date of Joining</label>
-                  <input
-                    type="date"
-                    value={workerForm.dateOfJoining}
-                    onChange={(e) => setWorkerForm(prev => ({ ...prev, dateOfJoining: e.target.value }))}
-                    className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                    required
-                  />
+                  <label className="text-[11px] font-bold text-surface-on-variant uppercase tracking-wider">Residential Address</label>
+                  <textarea
+                    rows={2}
+                    value={workerForm.address}
+                    onChange={(e) => setWorkerForm(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Enter complete residential address..."
+                    className="w-full px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+                  ></textarea>
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-t border-outline-variant flex justify-end gap-2.5">
+              <div className="px-6 py-4 border-t border-outline-variant flex justify-end gap-2.5 sticky bottom-0 bg-surface-lowest z-10">
                 <button 
                   type="button" 
                   className="btn btn-ghost px-4 py-2 text-xs font-semibold rounded-sm border border-outline-variant hover:bg-surface-low transition-colors cursor-pointer" 
@@ -908,7 +1035,8 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
                   type="submit" 
                   className="btn btn-primary px-4 py-2 bg-primary text-white flex items-center gap-1.5 rounded-sm hover:bg-primary-container font-semibold text-xs transition-colors cursor-pointer"
                 >
-                  <span className="material-symbols-outlined icon-xs text-white">save</span>Save Profile
+                  <span className="material-symbols-outlined icon-xs text-white">save</span>
+                  {editWorker ? 'Update Staff Profile' : 'Register & Onboard Staff'}
                 </button>
               </div>
             </form>
