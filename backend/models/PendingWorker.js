@@ -37,8 +37,8 @@ const PendingWorkerSchema = new mongoose.Schema({
   },
   department: {
     type: String,
-    required: [true, 'Department is required'],
-    trim: true
+    trim: true,
+    default: 'Operations'
   },
   branch: {
     type: String,

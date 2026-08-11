@@ -43,6 +43,7 @@ const TaskSchema = new mongoose.Schema({
   taskType: { type: String, default: 'General' },
   estimatedDuration: { type: String },
 
+  assignedDate: { type: Date, default: Date.now },
   dueDate: { type: Date },
   startedAt: { type: Date },
   completedAt: { type: Date },
@@ -72,12 +73,13 @@ const TaskSchema = new mongoose.Schema({
   attachments: [String]    
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
-// Pre-save hook to ensure title and name remain synced
+// Pre-save hook to ensure title, name, progress and assignedDate remain synced
 TaskSchema.pre('save', function(next) {
   if (this.title && !this.name) this.name = this.title;
   if (this.name && !this.title) this.title = this.name;
   if (this.progressPercent !== undefined && this.progress === 0) this.progress = this.progressPercent;
   if (this.progress !== undefined && this.progressPercent === 0) this.progressPercent = this.progress;
+  if (!this.assignedDate) this.assignedDate = this.createdAt || new Date();
   next();
 });
 

@@ -173,14 +173,15 @@ const WorkerProgress = ({ showToast }) => {
                   )}
                 </div>
 
-                {/* Footer Action Button */}
-                <div className="border-t border-outline-variant/40 pt-3 flex items-center justify-between">
-                  <span className="text-[11px] text-outline font-medium">
-                    Priority: <strong className="text-on-surface">{task.priority || 'Medium'}</strong>
-                  </span>
+                {/* Footer Action Button & Dates */}
+                <div className="border-t border-outline-variant/40 pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-outline font-medium">
+                  <div className="flex flex-col gap-0.5">
+                    <span>Assigned: <strong className="text-on-surface font-mono">{task.assignedDate || task.createdAt ? new Date(task.assignedDate || task.createdAt).toLocaleDateString() : 'N/A'}</strong></span>
+                    <span>Due: <strong className="text-primary font-mono">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</strong></span>
+                  </div>
                   <button
                     onClick={() => handleOpenProgressUpdate(task)}
-                    className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold py-1.5 px-3 rounded-sm shadow-sm flex items-center gap-1.5 cursor-pointer uppercase tracking-wider"
+                    className="btn bg-primary hover:bg-primary-container text-white text-xs font-bold py-1.5 px-3 rounded-sm shadow-sm flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider self-end sm:self-auto"
                   >
                     <span className="material-symbols-outlined text-[16px]">edit_note</span>
                     Update Progress

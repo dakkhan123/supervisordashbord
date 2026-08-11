@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 
+const formatTaskDate = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'N/A';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 const WorkerTasks = ({ showToast }) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +63,7 @@ const WorkerTasks = ({ showToast }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {tasks.map((task) => {
             const assignedDate = task.assignedDate || task.createdAt;
+            const progressVal = task.progressPercent !== undefined ? task.progressPercent : (task.progress || 0);
 
             return (
               <div
@@ -83,19 +94,33 @@ const WorkerTasks = ({ showToast }) => {
 
                   <h3 className="text-base font-extrabold text-on-surface line-clamp-1">{task.title || task.name}</h3>
                   <p className="text-xs text-outline mt-1 line-clamp-2">{task.description || 'No description provided.'}</p>
+
+                  {/* Progress Indicator */}
+                  <div className="flex flex-col gap-1 mt-3">
+                    <div className="flex justify-between items-center text-[11px] font-bold">
+                      <span className="text-outline uppercase tracking-wider text-[10px]">Progress</span>
+                      <span className="text-primary font-mono">{progressVal}%</span>
+                    </div>
+                    <div className="w-full bg-surface-low border border-outline-variant/60 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-primary h-full rounded-full transition-all duration-300"
+                        style={{ width: `${progressVal}%` }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="border-t border-outline-variant/40 pt-3 flex flex-col gap-1.5 text-xs text-outline font-medium">
                   <div className="flex justify-between items-center">
-                    <span>Assigned Date:</span>
-                    <span className="font-bold text-on-surface">
-                      {assignedDate ? new Date(assignedDate).toLocaleDateString() : 'N/A'}
+                    <span className="font-semibold">Assigned Date:</span>
+                    <span className="font-bold text-on-surface font-mono">
+                      {formatTaskDate(assignedDate)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>Due Date:</span>
-                    <span className="font-bold text-primary">
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}
+                    <span className="font-semibold">Due Date:</span>
+                    <span className="font-bold text-primary font-mono">
+                      {formatTaskDate(task.dueDate)}
                     </span>
                   </div>
 
@@ -149,18 +174,18 @@ const WorkerTasks = ({ showToast }) => {
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-outline uppercase tracking-wider block mb-0.5">Progress</span>
-                  <span className="font-extrabold text-on-surface">{selectedTask.progressPercent || selectedTask.progress || 0}%</span>
+                  <span className="font-extrabold text-on-surface font-mono">{selectedTask.progressPercent || selectedTask.progress || 0}%</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-outline uppercase tracking-wider block mb-0.5">Assigned Date</span>
-                  <span className="font-medium text-on-surface">
-                    {selectedTask.assignedDate || selectedTask.createdAt ? new Date(selectedTask.assignedDate || selectedTask.createdAt).toLocaleDateString() : 'N/A'}
+                  <span className="font-bold text-on-surface font-mono">
+                    {formatTaskDate(selectedTask.assignedDate || selectedTask.createdAt)}
                   </span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-outline uppercase tracking-wider block mb-0.5">Target Due Date</span>
-                  <span className="font-bold text-primary">
-                    {selectedTask.dueDate ? new Date(selectedTask.dueDate).toLocaleDateString() : 'N/A'}
+                  <span className="font-bold text-primary font-mono">
+                    {formatTaskDate(selectedTask.dueDate)}
                   </span>
                 </div>
               </div>

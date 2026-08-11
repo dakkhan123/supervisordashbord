@@ -38,6 +38,9 @@ class TaskService {
   }
 
   async createTask(taskData) {
+    if (!taskData.assignedDate) {
+      taskData.assignedDate = new Date();
+    }
     const task = await Task.create(taskData);
     const populatedTask = await Task.findById(task._id).populate('assignedTo');
 

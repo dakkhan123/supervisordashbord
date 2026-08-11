@@ -311,6 +311,8 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<Login showToast={showToast} onLoginSuccess={(u) => setUser(u)} />} />
           <Route path="/register" element={<Register showToast={showToast} />} />
+          <Route path="/register-worker" element={<WorkerRegister showToast={showToast} />} />
+          <Route path="/worker/register" element={<WorkerRegister showToast={showToast} />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <ToastContainer toasts={toasts} removeToast={removeToast} />

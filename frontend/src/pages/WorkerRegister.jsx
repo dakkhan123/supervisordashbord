@@ -16,7 +16,6 @@ const WorkerRegister = ({ showToast }) => {
     dateOfBirth: '',
     address: '',
     joiningDate: new Date().toISOString().split('T')[0],
-    department: DEPARTMENT_OPTIONS[0],
     branch: BRANCH_OPTIONS[0],
     photo: ''
   });
@@ -54,7 +53,7 @@ const WorkerRegister = ({ showToast }) => {
   const handleSubmitForm = async (e) => {
     e.preventDefault();
 
-    const validation = validateWorkerRegistrationFields(form);
+    const validation = validateWorkerRegistrationFields(form, { requireDepartment: false });
     if (!validation.isValid) {
       if (showToast) showToast(validation.error, 'error');
       return;
@@ -294,21 +293,6 @@ const WorkerRegister = ({ showToast }) => {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Department *</label>
-                <select
-                  value={form.department}
-                  onChange={(e) => setForm({ ...form, department: e.target.value })}
-                  className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-bold text-on-surface outline-none focus:border-primary cursor-pointer"
-                >
-                  {DEPARTMENT_OPTIONS.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Date of Birth</label>
                 <input
                   type="date"
@@ -317,16 +301,16 @@ const WorkerRegister = ({ showToast }) => {
                   className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary"
                 />
               </div>
+            </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Joining Date</label>
-                <input
-                  type="date"
-                  value={form.joiningDate}
-                  onChange={(e) => setForm({ ...form, joiningDate: e.target.value })}
-                  className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary"
-                />
-              </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-bold text-outline uppercase tracking-wider">Joining Date</label>
+              <input
+                type="date"
+                value={form.joiningDate}
+                onChange={(e) => setForm({ ...form, joiningDate: e.target.value })}
+                className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary"
+              />
             </div>
 
             <div className="flex flex-col gap-1">

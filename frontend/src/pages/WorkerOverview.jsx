@@ -267,7 +267,8 @@ const WorkerOverview = ({ searchVal, showToast, user }) => {
     try {
       const res = await api.createTask({
         ...taskForm,
-        assignedTo: selectedWorkerId
+        assignedTo: selectedWorkerId,
+        assignedDate: new Date()
       });
       if (res.success) {
         showToast('New task assigned successfully', 'success');

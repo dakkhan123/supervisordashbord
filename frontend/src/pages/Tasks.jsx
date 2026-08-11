@@ -352,7 +352,8 @@ const Tasks = ({ showToast }) => {
                 <tr className="bg-surface-low border-b border-outline-variant">
                   <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Task Details</th>
                   <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Assigned Staff</th>
-                  <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Due Date</th>
+                  <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Dates (Assigned / Due)</th>
+                  <th className="p-3.5 text-[11px] font-bold text-outline uppercase tracking-wider">Progress</th>
                   <th className="p-3.5 text-[11px] font-bold text-outline tracking-wider uppercase">Status</th>
                   <th className="p-3.5 text-[11px] font-bold text-outline tracking-wider uppercase text-right">Actions</th>
                 </tr>
@@ -360,9 +361,21 @@ const Tasks = ({ showToast }) => {
               <tbody>
                 {filteredTasks.map(t => {
                   const overdue = isTaskOverdue(t);
+                  const assignedDate = t.assignedDate || t.createdAt;
+                  const progressVal = t.progressPercent !== undefined ? t.progressPercent : (t.progress || 0);
+
                   return (
                     <tr key={t._id} className="border-b border-outline-variant/30 hover:bg-surface-low transition-colors duration-150">
                       <td className="p-3.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                            t.priority === 'Urgent' || t.priority === 'Critical' || t.priority === 'High'
+                              ? 'bg-error/10 text-error border border-error/20'
+                              : 'bg-primary/10 text-primary border border-primary/20'
+                          }`}>
+                            {t.priority || 'Medium'}
+                          </span>
+                        </div>
                         <button
                           onClick={() => setDetailsTask(t)}
                           className="font-bold text-on-surface hover:text-primary hover:underline text-[13px] text-left cursor-pointer focus:outline-none block"
@@ -378,13 +391,25 @@ const Tasks = ({ showToast }) => {
                         </div>
                       </td>
                       <td className="p-3.5 font-medium text-outline">
-                        <div className="flex flex-col gap-0.5">
-                          <span>{formatDate(t.dueDate)}</span>
+                        <div className="flex flex-col gap-0.5 text-[11px]">
+                          <span>Assigned Date: <strong className="text-on-surface font-mono">{formatDate(assignedDate)}</strong></span>
+                          <span>Due Date: <strong className="text-primary font-mono">{formatDate(t.dueDate)}</strong></span>
                           {overdue && (
-                            <span className="text-error font-extrabold text-[9px] uppercase tracking-wider flex items-center gap-0.5">
+                            <span className="text-error font-extrabold text-[9px] uppercase tracking-wider flex items-center gap-0.5 mt-0.5">
                               <span className="material-symbols-outlined text-[10px] icon-filled">warning</span> Overdue
                             </span>
                           )}
+                        </div>
+                      </td>
+                      <td className="p-3.5 font-medium text-outline">
+                        <div className="flex flex-col gap-1 w-24">
+                          <span className="font-mono text-xs font-bold text-on-surface">{progressVal}%</span>
+                          <div className="w-full bg-surface-low border border-outline-variant/60 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-primary h-full rounded-full transition-all duration-300"
+                              style={{ width: `${progressVal}%` }}
+                            ></div>
+                          </div>
                         </div>
                       </td>
                       <td className="p-3.5">
@@ -430,7 +455,7 @@ const Tasks = ({ showToast }) => {
                 })}
                 {filteredTasks.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="p-16 text-center text-outline font-semibold">
+                    <td colSpan="6" className="p-16 text-center text-outline font-semibold">
                       No active task allocations match the current filters.
                     </td>
                   </tr>
@@ -462,7 +487,16 @@ const Tasks = ({ showToast }) => {
               {/* Task Title & Description */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-[16px] font-bold text-on-surface leading-snug">{detailsTask.title}</h3>
+                  <div>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                      detailsTask.priority === 'Urgent' || detailsTask.priority === 'High'
+                        ? 'bg-error/10 text-error border border-error/20'
+                        : 'bg-primary/10 text-primary border border-primary/20'
+                    }`}>
+                      {detailsTask.priority || 'Medium'} Priority
+                    </span>
+                    <h3 className="text-[16px] font-bold text-on-surface leading-snug mt-1.5">{detailsTask.title}</h3>
+                  </div>
                   <span className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase ${getStatusBadgeClass(detailsTask.status)}`}>
                     {detailsTask.status}
                   </span>
@@ -470,16 +504,16 @@ const Tasks = ({ showToast }) => {
                 <p className="text-on-surface-variant text-[12px] bg-surface-low p-3.5 border border-outline-variant/30 rounded-sm leading-relaxed mt-1 whitespace-pre-wrap">
                   {detailsTask.description || 'No detailed task guidelines provided.'}
                 </p>
-                <div className="flex items-center gap-4 text-xs font-semibold text-outline mt-1">
-                  <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                    <span>Due: {formatDate(detailsTask.dueDate)}</span>
+                
+                <div className="grid grid-cols-2 gap-3 bg-surface-low p-3 rounded border border-outline-variant/30 text-xs font-semibold text-outline mt-1">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase block text-outline">Assigned Date</span>
+                    <span className="text-on-surface font-mono font-bold">{formatDate(detailsTask.assignedDate || detailsTask.createdAt)}</span>
                   </div>
-                  {isTaskOverdue(detailsTask) && (
-                    <span className="text-error font-extrabold uppercase text-[10px] tracking-wider flex items-center gap-0.5">
-                      <span className="material-symbols-outlined text-[12px] icon-filled">warning</span> Overdue
-                    </span>
-                  )}
+                  <div>
+                    <span className="text-[10px] font-bold uppercase block text-outline">Due Date</span>
+                    <span className="text-primary font-mono font-bold">{formatDate(detailsTask.dueDate)}</span>
+                  </div>
                 </div>
               </div>
 
