@@ -8,6 +8,20 @@ const WorkerLeaveRequests = ({ showToast }) => {
   const [submitting, setSubmitting] = useState(false);
 
   const [leaveReasonType, setLeaveReasonType] = useState('Personal Leave');
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+
+  const getDurationText = (req) => {
+    if (!req) return '';
+    if (req.leaveType === 'Half Day Leave') {
+      return '0.5 Day';
+    }
+    const from = new Date(req.fromDate);
+    const to = new Date(req.toDate);
+    const diffTime = Math.abs(to - from);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return `${diffDays} Day${diffDays > 1 ? 's' : ''}`;
+  };
 
   // Form State
   const [form, setForm] = useState({
@@ -160,7 +174,12 @@ const WorkerLeaveRequests = ({ showToast }) => {
             return (
               <div
                 key={req._id}
-                className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm flex flex-col justify-between gap-4"
+                onClick={(e) => {
+                  if (e.target.closest('button') || e.target.closest('a')) return;
+                  setSelectedRequest(req);
+                  setDetailModalOpen(true);
+                }}
+                className="bg-surface-lowest border border-outline-variant hover:border-primary rounded-md p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
@@ -190,6 +209,16 @@ const WorkerLeaveRequests = ({ showToast }) => {
                       <strong className="text-on-surface">
                         {new Date(req.fromDate).toLocaleDateString()} — {new Date(req.toDate).toLocaleDateString()}
                       </strong>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-outline font-medium">
+                      <span>Duration:</span>
+                      <strong className="text-primary font-bold">{getDurationText(req)}</strong>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-outline font-medium">
+                      <span>Status:</span>
+                      <strong className={`font-extrabold ${isApproved ? 'text-primary' : isRejected ? 'text-error' : 'text-amber-500'}`}>{req.status}</strong>
                     </div>
 
                     {req.leaveType === 'Half Day Leave' && req.halfDaySession !== 'N/A' && (
@@ -400,6 +429,126 @@ const WorkerLeaveRequests = ({ showToast }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Leave Details Modal */}
+      {detailModalOpen && selectedRequest && (
+        <div className="fixed inset-0 z-50 bg-[#0b1c30]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-lowest border border-outline-variant rounded-lg max-w-lg w-full p-6 shadow-xl flex flex-col gap-5 text-on-surface animate-scale-up">
+            <div className="flex items-start justify-between border-b border-outline-variant/40 pb-3">
+              <div>
+                <h3 className="text-lg font-extrabold text-on-surface">Leave Request Details</h3>
+                <p className="text-xs text-outline mt-0.5">Full specifications of your submitted application</p>
+              </div>
+              <button
+                onClick={() => setDetailModalOpen(false)}
+                className="w-7 h-7 rounded hover:bg-surface-low text-on-surface-variant flex items-center justify-center cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4 text-xs font-semibold text-outline">
+              <div className="grid grid-cols-2 gap-4 bg-surface-low p-4 rounded border border-outline-variant/30">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase font-bold text-outline">Leave Type</span>
+                  <span className="text-on-surface font-extrabold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-primary text-[16px]">
+                      {selectedRequest.leaveType === 'Half Day Leave' ? 'timelapse' : 'event_available'}
+                    </span>
+                    {selectedRequest.leaveType}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase font-bold text-outline">Status</span>
+                  <span className={`font-extrabold uppercase px-2.5 py-0.5 rounded-full text-[10px] w-fit border ${
+                    selectedRequest.status === 'Approved'
+                      ? 'bg-primary/10 text-primary border-primary/20'
+                      : selectedRequest.status === 'Rejected'
+                      ? 'bg-error/10 text-error border-error/20'
+                      : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                  }`}>
+                    {selectedRequest.status}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase font-bold text-outline">From Date</span>
+                  <span className="text-on-surface font-bold">{new Date(selectedRequest.fromDate).toLocaleDateString()}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase font-bold text-outline">To Date</span>
+                  <span className="text-on-surface font-bold">{new Date(selectedRequest.toDate).toLocaleDateString()}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase font-bold text-outline">Duration</span>
+                  <span className="text-primary font-black">{getDurationText(selectedRequest)}</span>
+                </div>
+                {selectedRequest.leaveType === 'Half Day Leave' && selectedRequest.halfDaySession !== 'N/A' && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase font-bold text-outline">Half Day Session</span>
+                    <span className="text-on-surface font-bold">{selectedRequest.halfDaySession}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1 bg-surface-low p-4 rounded border border-outline-variant/30">
+                <span className="text-[10px] uppercase font-bold text-outline">Reason for Leave</span>
+                <p className="text-on-surface font-medium whitespace-pre-wrap leading-relaxed mt-0.5">{selectedRequest.reason}</p>
+              </div>
+
+              {selectedRequest.attachment && (
+                <div className="flex flex-col gap-1 bg-surface-low p-4 rounded border border-outline-variant/30">
+                  <span className="text-[10px] uppercase font-bold text-outline">Attachment</span>
+                  <a
+                    href={selectedRequest.attachment}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary font-bold hover:underline flex items-center gap-1 mt-0.5"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">attachment</span>
+                    View Attached Document
+                  </a>
+                </div>
+              )}
+
+              {selectedRequest.supervisorComment && (
+                <div className={`p-4 rounded border flex flex-col gap-1 ${
+                  selectedRequest.status === 'Rejected' ? 'bg-error/5 border-error/20 text-error' : 'bg-surface-low border-outline-variant text-on-surface'
+                }`}>
+                  <span className="text-[10px] uppercase font-bold text-outline">Supervisor Comment</span>
+                  <p className="font-medium leading-relaxed mt-0.5">{selectedRequest.supervisorComment}</p>
+                </div>
+              )}
+
+              <div className="text-[10px] text-outline font-mono mt-1">
+                Submitted on: {new Date(selectedRequest.createdAt).toLocaleString()}
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center border-t border-outline-variant/40 pt-4 mt-2">
+              <div>
+                {selectedRequest.status === 'Pending' && (
+                  <button
+                    onClick={() => {
+                      handleCancelRequest(selectedRequest._id);
+                      setDetailModalOpen(false);
+                    }}
+                    className="btn border border-error/30 hover:bg-error/10 text-error text-xs font-bold py-2 px-4 rounded-sm uppercase tracking-wider cursor-pointer"
+                  >
+                    Cancel Request
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailModalOpen(false)}
+                className="btn bg-surface-low hover:bg-surface-container border border-outline-variant text-on-surface text-xs font-bold py-2 px-5 rounded-sm cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
