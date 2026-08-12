@@ -79,6 +79,8 @@ const WorkerRegister = ({ showToast }) => {
       setLoading(true);
       const res = await api.registerWorkerSendOTP({
         ...form,
+        username: form.username.trim().toLowerCase(),
+        email: form.email.trim().toLowerCase(),
         mobile: cleanMobile
       });
 

@@ -15,10 +15,10 @@ class AuthController {
     try {
       const { fullName, username, email, password, confirmPassword, mobile, dateOfBirth, address, joiningDate, department, branch, photo } = req.body;
 
-      if (!fullName || !username || !email || !password || !mobile || !department || !branch) {
+      if (!fullName || !username || !email || !password || !mobile) {
         return res.status(400).json({
           success: false,
-          error: 'Full Name, Username, Email, Password, Mobile Number, Department, and Branch / Office are mandatory.'
+          error: 'Full Name, Username, Email, Password, and Mobile Number are mandatory.'
         });
       }
 
@@ -47,28 +47,60 @@ class AuthController {
 
       const cleanUsername = username.toLowerCase().trim();
       const cleanEmail = email.toLowerCase().trim();
-      const cleanBranch = branch.trim();
+      const cleanBranch = (branch && branch.trim()) ? branch.trim() : 'Pune Head Office';
+      const cleanDepartment = (department && department.trim()) ? department.trim() : 'Operations';
 
-      // Check duplicate in User collection
-      const existingUser = await User.findOne({
-        $or: [{ username: cleanUsername }, { email: cleanEmail }]
-      });
-      if (existingUser) {
+      // 1. Check duplicate username in User collection
+      const existingUserByUsername = await User.findOne({ username: cleanUsername });
+      if (existingUserByUsername) {
         return res.status(400).json({
           success: false,
-          error: 'Username or Email address is already registered. Please log in or use another email.'
+          error: `The username '${cleanUsername}' is already taken. Please choose a different username.`
         });
       }
 
-      // Check duplicate in PendingWorker collection (Active or Pending)
-      const existingPending = await PendingWorker.findOne({
-        $or: [{ username: cleanUsername }, { email: cleanEmail }],
-        status: { $in: ['Pending', 'Approved'] }
-      });
-      if (existingPending) {
+      // 2. Check duplicate email in User collection
+      const existingUserByEmail = await User.findOne({ email: cleanEmail });
+      if (existingUserByEmail) {
         return res.status(400).json({
           success: false,
-          error: 'A registration request with this Username or Email is already pending or approved.'
+          error: `An account with the email '${cleanEmail}' is already registered. Please log in or reset your password.`
+        });
+      }
+
+      // 3. Check duplicate active email in Worker collection
+      const existingWorkerByEmail = await Worker.findOne({ email: cleanEmail, status: 'Active' });
+      if (existingWorkerByEmail) {
+        return res.status(400).json({
+          success: false,
+          error: `An active worker account with the email '${cleanEmail}' is already registered. Please log in.`
+        });
+      }
+
+      // 4. Check duplicate in PendingWorker collection (Pending or Approved)
+      const pendingByUsername = await PendingWorker.findOne({
+        username: cleanUsername,
+        status: { $in: ['Pending', 'Approved'] }
+      });
+      if (pendingByUsername) {
+        return res.status(400).json({
+          success: false,
+          error: pendingByUsername.status === 'Approved'
+            ? `The username '${cleanUsername}' belongs to an approved worker account. Please log in.`
+            : `A registration request with username '${cleanUsername}' is currently pending supervisor approval.`
+        });
+      }
+
+      const pendingByEmail = await PendingWorker.findOne({
+        email: cleanEmail,
+        status: { $in: ['Pending', 'Approved'] }
+      });
+      if (pendingByEmail) {
+        return res.status(400).json({
+          success: false,
+          error: pendingByEmail.status === 'Approved'
+            ? `An application with the email '${cleanEmail}' is already approved. Please log in.`
+            : `A registration request for email '${cleanEmail}' is currently pending supervisor approval.`
         });
       }
 
@@ -89,7 +121,7 @@ class AuthController {
         password: hashedPassword,
         phone: cleanMobile,
         role: 'Worker',
-        department: department.trim(),
+        department: cleanDepartment,
         branch: cleanBranch,
         dateOfJoining: joiningDate ? new Date(joiningDate) : new Date(),
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
