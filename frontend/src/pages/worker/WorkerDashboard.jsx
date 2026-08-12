@@ -107,8 +107,8 @@ const WorkerDashboard = ({ showToast }) => {
         </div>
       </div>
 
-      {/* 2. Row 1 Grid: Today's Attendance, Monthly Summary, Attendance Timeline */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* 2. Row 1 Grid: Today's Attendance, Monthly Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         
         {/* Card 1: Today's Attendance */}
         <div className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm relative overflow-hidden flex flex-col justify-between gap-4">
@@ -199,24 +199,6 @@ const WorkerDashboard = ({ showToast }) => {
             </div>
             <p className="text-[11px] text-outline font-semibold mt-1">
               Overtime Premium Hours: <span className="text-on-surface font-bold">2.0 Hours</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Card 3: Attendance Timeline */}
-        <div className="bg-surface-lowest border border-outline-variant rounded-md p-5 shadow-sm flex flex-col justify-between gap-4">
-          <div>
-            <h3 className="text-sm font-bold text-on-surface">Attendance Timeline</h3>
-            <p className="text-[11px] text-outline font-medium mt-0.5">Chronological sequence of today's events</p>
-          </div>
-
-          <div className="flex-1 min-h-[140px] flex flex-col items-center justify-center text-center p-4">
-            <span className="material-symbols-outlined text-[48px] text-outline/40 mb-2">
-              fingerprint
-            </span>
-            <p className="text-xs font-bold text-on-surface">Biometric Session Active</p>
-            <p className="text-[10px] text-outline max-w-xs mt-1">
-              Clock in/out events are recorded automatically on your supervisor ledger.
             </p>
           </div>
         </div>
