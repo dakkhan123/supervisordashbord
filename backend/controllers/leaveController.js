@@ -49,6 +49,15 @@ class LeaveController {
         });
       }
 
+      const diffTime = Math.abs(endDate - startDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      if (diffDays > 10) {
+        return res.status(400).json({
+          success: false,
+          error: 'The maximum duration for a leave request is 10 days. For longer leaves, please contact your supervisor personally.'
+        });
+      }
+
       const leaveReq = await LeaveRequest.create({
         workerId: worker._id,
         leaveType,

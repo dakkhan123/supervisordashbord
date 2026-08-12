@@ -7,10 +7,12 @@ const WorkerLeaveRequests = ({ showToast }) => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const [leaveReasonType, setLeaveReasonType] = useState('Personal Leave');
+
   // Form State
   const [form, setForm] = useState({
     leaveType: 'Full Day Leave',
-    reason: '',
+    reason: 'Personal Leave',
     fromDate: new Date().toISOString().split('T')[0],
     toDate: new Date().toISOString().split('T')[0],
     halfDaySession: 'First Half',
@@ -53,6 +55,16 @@ const WorkerLeaveRequests = ({ showToast }) => {
       return;
     }
 
+    const from = new Date(form.fromDate);
+    const to = new Date(form.toDate);
+    const diffTime = Math.abs(to - from);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // inclusive count
+
+    if (diffDays > 10) {
+      if (showToast) showToast('The maximum duration for a leave request is 10 days. For longer leaves, please contact your supervisor personally.', 'error');
+      return;
+    }
+
     try {
       setSubmitting(true);
       const payload = {
@@ -70,12 +82,13 @@ const WorkerLeaveRequests = ({ showToast }) => {
         setCreateModalOpen(false);
         setForm({
           leaveType: 'Full Day Leave',
-          reason: '',
+          reason: 'Personal Leave',
           fromDate: new Date().toISOString().split('T')[0],
           toDate: new Date().toISOString().split('T')[0],
           halfDaySession: 'First Half',
           attachment: ''
         });
+        setLeaveReasonType('Personal Leave');
         fetchMyRequests();
       } else {
         if (showToast) showToast(res.error || 'Failed to submit leave request', 'error');
@@ -322,16 +335,41 @@ const WorkerLeaveRequests = ({ showToast }) => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-on-surface uppercase tracking-wider">Reason for Leave (Required)</label>
-                <textarea
-                  rows={3}
-                  placeholder="State the reason for your leave application..."
-                  value={form.reason}
-                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                  className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary resize-none"
-                  required
-                ></textarea>
+                <label className="text-xs font-bold text-on-surface uppercase tracking-wider">Reason for Leave Category</label>
+                <select
+                  value={leaveReasonType}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLeaveReasonType(val);
+                    if (val !== 'Other') {
+                      setForm((prev) => ({ ...prev, reason: val }));
+                    } else {
+                      setForm((prev) => ({ ...prev, reason: '' }));
+                    }
+                  }}
+                  className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-bold text-on-surface outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="Personal Leave">Personal Leave</option>
+                  <option value="Sick Leave">Sick Leave</option>
+                  <option value="Maternity Leave">Maternity Leave</option>
+                  <option value="Emergency Leave">Emergency Leave</option>
+                  <option value="Other">Other (Specify below)</option>
+                </select>
               </div>
+
+              {leaveReasonType === 'Other' && (
+                <div className="flex flex-col gap-1.5 animate-fade-in">
+                  <label className="text-xs font-bold text-on-surface uppercase tracking-wider">Specify Personal Reason (Required)</label>
+                  <textarea
+                    rows={3}
+                    placeholder="State the specific reason for your leave application..."
+                    value={form.reason}
+                    onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                    className="px-3 py-2 bg-surface-low border border-outline-variant rounded-sm text-xs font-medium text-on-surface outline-none focus:border-primary resize-none"
+                    required
+                  ></textarea>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-on-surface uppercase tracking-wider">Attachment URL (Optional)</label>
